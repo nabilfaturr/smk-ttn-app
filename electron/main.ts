@@ -17,7 +17,17 @@ function createWindow() {
       nodeIntegration: false,
     },
     title: "Sistem Absensi dan Penilaian - SMK TTN",
-    show: false,
+    show: true,
+  })
+
+  mainWindow.webContents.on("did-fail-load", (_, code, desc, url) => {
+    console.error(`[renderer] did-fail-load: code=${code} desc=${desc} url=${url}`)
+  })
+  mainWindow.webContents.on("render-process-gone", (_, details) => {
+    console.error(`[renderer] render-process-gone:`, details)
+  })
+  mainWindow.webContents.on("preload-error", (_, preloadPath, error) => {
+    console.error(`[renderer] preload-error: path=${preloadPath}`, error)
   })
 
   mainWindow.once("ready-to-show", () => {

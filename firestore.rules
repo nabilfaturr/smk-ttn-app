@@ -1,0 +1,118 @@
+rules_version = '2';
+
+// Firestore Security Rules untuk SMK TTN Desktop App
+// Project: smk-ttn-app
+//
+// CATATAN SECURITY:
+// - Desktop app pakai API key (bukan Firebase Auth user), jadi rules
+//   tidak bisa restrict ke user tertentu.
+// - Rules ini ALLOW read/write ke 19 collection yang dipakai app.
+// - Untuk production multi-tenant, tambahkan Firebase Auth + custom claims.
+// - API key di-bundle ke .exe, jadi siapa pun yg punya .exe bisa akses.
+//   Untuk SMK (single school, controlled environment), ini acceptable.
+//
+// Setup:
+// 1. Firebase Console → Firestore Database → Rules tab
+// 2. Replace semua isi dengan rules ini
+// 3. Klik "Publish"
+//
+// Atau pakai CLI:
+//   firebase deploy --only firestore:rules
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper: cek apakah user terautentikasi (untuk future use)
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    // ============================================================
+    // MASTER DATA (siswa, guru, kelas, mapel, dll)
+    // ============================================================
+    match /siswa/{docId} {
+      allow read, write: if true;  // Desktop app, no auth
+    }
+    match /guru/{docId} {
+      allow read, write: if true;
+    }
+    match /users/{docId} {
+      allow read, write: if true;
+    }
+    match /kelas/{docId} {
+      allow read, write: if true;
+    }
+    match /mata_pelajaran/{docId} {
+      allow read, write: if true;
+    }
+    match /tujuan_pembelajaran/{docId} {
+      allow read, write: if true;
+    }
+    match /tahun_ajaran/{docId} {
+      allow read, write: if true;
+    }
+    match /info_sekolah/{docId} {
+      allow read, write: if true;
+    }
+    match /konfigurasi/{docId} {
+      allow read, write: if true;
+    }
+
+    // ============================================================
+    // ABSENSI
+    // ============================================================
+    match /absensi/{docId} {
+      allow read, write: if true;
+    }
+    match /absensi_prakerin/{docId} {
+      allow read, write: if true;
+    }
+
+    // ============================================================
+    // NILAI
+    // ============================================================
+    match /nilai/{docId} {
+      allow read, write: if true;
+    }
+    match /nilai_tp/{docId} {
+      allow read, write: if true;
+    }
+    match /nilai_kokurikuler/{docId} {
+      allow read, write: if true;
+    }
+    match /nilai_ketarunaan/{docId} {
+      allow read, write: if true;
+    }
+    match /nilai_ekskul/{docId} {
+      allow read, write: if true;
+    }
+    match /nilai_prakerin/{docId} {
+      allow read, write: if true;
+    }
+    match /catatan_wali_kelas/{docId} {
+      allow read, write: if true;
+    }
+    match /ekskul/{docId} {
+      allow read, write: if true;
+    }
+    match /dimensi_p5/{docId} {
+      allow read, write: if true;
+    }
+    match /subdimensi_p5/{docId} {
+      allow read, write: if true;
+    }
+    match /subdimensi_p5_tingkat/{docId} {
+      allow read, write: if true;
+    }
+    match /mapel_kelas_guru/{docId} {
+      allow read, write: if true;
+    }
+
+    // ============================================================
+    // DENY ALL OTHER COLLECTIONS
+    // ============================================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

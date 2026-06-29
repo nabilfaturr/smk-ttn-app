@@ -1,0 +1,1 @@
+module.exports = { app: { getAppPath: () => "/home/nabilfaturr/Documents/projetcs/smk-ttn-app", getPath: (n) => n === "userData" ? "/home/nabilfaturr/.config/smk-ttn-app" : "" } }

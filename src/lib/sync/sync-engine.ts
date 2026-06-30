@@ -311,3 +311,121 @@ function isFirebaseConfigured(): boolean {
   const cfg = getFirebaseConfig()
   return !!(cfg.apiKey && cfg.projectId)
 }
+
+/* ------------------------------------------------------------------ */
+/*  PULL: fetch from Firestore → upsert ke SQLite                       */
+/* ------------------------------------------------------------------ */
+
+import { getDocs, collection } from "firebase/firestore"
+import { getFirestoreDb } from "./firebase-config"
+
+/**
+ * Daftar tabel master yang di-pull dari Firestore.
+ * Urutan penting: parent dulu, baru yang punya FK.
+ * (Tabel tanpa FK bisa dipull duluan tanpa error FK constraint.)
+ */
+const PULLABLE_TABLES: Array<{ name: string; schema: any; hasId: boolean }> = [
+  { name: "users", schema: users, hasId: true },
+  { name: "tahun_ajaran", schema: tahunAjaran, hasId: true },
+  { name: "info_sekolah", schema: infoSekolah, hasId: true },
+  { name: "konfigurasi", schema: konfigurasi, hasId: true },
+  { name: "dimensi_p5", schema: dimensiP5, hasId: true },
+  { name: "subdimensi_p5", schema: subdimensiP5, hasId: true },
+  { name: "subdimensi_p5_tingkat", schema: subdimensiP5Tingkat, hasId: true },
+  { name: "ekskul", schema: ekskul, hasId: true },
+  { name: "guru", schema: guru, hasId: true },
+  { name: "mata_pelajaran", schema: mataPelajaran, hasId: true },
+  { name: "kelas", schema: kelas, hasId: true },
+  { name: "mapel_kelas_guru", schema: mapelKelasGuru, hasId: true },
+  { name: "siswa", schema: siswa, hasId: true },
+]
+
+export type PullResult = {
+  success: boolean
+  totalFetched: number
+  totalUpserted: number
+  tables: Array<{ name: string; fetched: number; upserted: number; error?: string }>
+  error?: string
+}
+
+/**
+ * Pull semua data master dari Firestore ke local SQLite.
+ * Strategi: INSERT OR REPLACE per row (overwrite local).
+ * Urutan: parent table dulu, baru child (FK-safe).
+ */
+export async function pullFromFirestore(
+  onProgress?: (table: string, fetched: number) => void,
+): Promise<PullResult> {
+  const result: PullResult = {
+    success: true,
+    totalFetched: 0,
+    totalUpserted: 0,
+    tables: [],
+  }
+
+  // Init Firebase kalau belum
+  if (!initFirebase()) {
+    return { ...result, success: false, error: "Firebase not configured" }
+  }
+
+  const db = getFirestoreDb()
+  if (!db) {
+    return { ...result, success: false, error: "Firestore not initialized" }
+  }
+
+  const sqlite = getDb()
+
+  for (const { name, schema, hasId } of PULLABLE_TABLES) {
+    try {
+      const snap = await getDocs(collection(db, name))
+      const docs = snap.docs
+      let upserted = 0
+
+      if (docs.length > 0) {
+        onProgress?.(name, docs.length)
+      }
+
+      for (const docSnap of docs) {
+        const data = docSnap.data() as Record<string, any>
+        // Firestore doc ID kita set sebagai string dari SQLite id (di pushToFirestore)
+        // Pakai ID dari data kalau ada, fallback ke doc id
+        const id = hasId && data.id != null ? Number(data.id) : null
+
+        // Strip undefined values (Drizzle gak terima undefined)
+        const cleanData: Record<string, any> = {}
+        for (const [k, v] of Object.entries(data)) {
+          if (v !== undefined) cleanData[k] = v
+        }
+
+        try {
+          if (id != null && hasId) {
+            // Upsert by id
+            sqlite.insert(schema).values({ id, ...cleanData }).onConflictDoUpdate({
+              target: schema.id,
+              set: cleanData,
+            }).run()
+          } else {
+            // Insert (tabel tanpa id autoincrement — gak ada di master)
+            sqlite.insert(schema).values(cleanData).run()
+          }
+          upserted++
+        } catch (rowErr: any) {
+          // Skip individual row errors, lanjut ke row berikutnya
+          console.warn(`[pull] ${name} row id=${id} failed:`, rowErr?.message ?? rowErr)
+        }
+      }
+
+      result.totalFetched += docs.length
+      result.totalUpserted += upserted
+      result.tables.push({ name, fetched: docs.length, upserted })
+    } catch (tableErr: any) {
+      const msg = tableErr?.message ?? String(tableErr)
+      console.error(`[pull] table ${name} failed:`, msg)
+      result.tables.push({ name, fetched: 0, upserted: 0, error: msg })
+      // Lanjut ke table berikutnya — partial pull lebih berguna daripada gagal total
+    }
+  }
+
+  return result
+}
+

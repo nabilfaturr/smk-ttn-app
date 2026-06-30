@@ -1,5 +1,5 @@
 import { ipcMain, dialog } from "electron"
-import { getSyncStatus, triggerManualSync, exportDatabase } from "../../src/lib/sync/sync-engine"
+import { getSyncStatus, triggerManualSync, exportDatabase, pullFromFirestore } from "../../src/lib/sync/sync-engine"
 
 ipcMain.handle("sync:getStatus", async () => {
   try {
@@ -14,6 +14,22 @@ ipcMain.handle("sync:triggerManualSync", async () => {
     return await triggerManualSync()
   } catch (error: any) {
     return { error: error.message }
+  }
+})
+
+ipcMain.handle("sync:pullFromCloud", async (_event, options?: { onProgress?: boolean }) => {
+  try {
+    const result = await pullFromFirestore(
+      options?.onProgress
+        ? (table, fetched) => {
+            // Send progress event ke renderer
+            // (ipcMain.emit / event.sender.send — pakai event yang dikirim)
+          }
+        : undefined,
+    )
+    return result
+  } catch (error: any) {
+    return { success: false, error: error.message, totalFetched: 0, totalUpserted: 0, tables: [] }
   }
 })
 

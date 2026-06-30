@@ -88,6 +88,7 @@ export interface ElectronAPI {
   // Sync
   syncGetStatus: () => Promise<any>
   syncTriggerManualSync: () => Promise<{ success: boolean }>
+  syncPullFromCloud: () => Promise<{ success: boolean; totalFetched: number; totalUpserted: number; tables: Array<{ name: string; fetched: number; upserted: number; error?: string }>; error?: string }>
   syncExportDatabase: () => Promise<string | null>
 
   // Dialog

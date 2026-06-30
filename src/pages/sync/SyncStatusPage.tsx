@@ -6,14 +6,17 @@ import { useSyncStore } from "@/stores/syncStore"
 import { toast } from "sonner"
 
 export function SyncStatusPage() {
-  const { connectionStatus, pendingCount, lastSync, setConnectionStatus, setPendingCount, setLastSync } = useSyncStore()
+  const { connectionStatus, pendingCount, lastSync, setConnectionStatus, setPendingCount, setLastSync, setFailedCount, setFirebaseConfigured } = useSyncStore()
   const [logs, setLogs] = useState<any[]>([])
+  const [pulling, setPulling] = useState(false)
 
   async function loadStatus() {
     const res = await window.electronAPI.syncGetStatus()
     if (res?.error) return
     setConnectionStatus(res.online ? "online" : "offline")
     setPendingCount(res.pendingCount ?? 0)
+    setFailedCount(res.failedCount ?? 0)
+    setFirebaseConfigured(!!res.firebaseConfigured)
     setLastSync(res.lastSync ?? null)
     setLogs(res.recentLogs ?? [])
   }
@@ -29,6 +32,33 @@ export function SyncStatusPage() {
       toast.error(`${result.count ?? 0} data masih pending`)
     }
     loadStatus()
+  }
+
+  async function handlePull() {
+    const ok = confirm(
+      "Restore dari Cloud akan menimpa data lokal dengan data dari Firebase.\n\n" +
+        "Lanjutkan? (Data lokal yang belum ter-sync akan hilang)",
+    )
+    if (!ok) return
+
+    setPulling(true)
+    const toastId = toast.loading("Menarik data dari cloud...")
+    try {
+      const result = await window.electronAPI.syncPullFromCloud()
+      if (result.success) {
+        toast.success(
+          `Restore selesai: ${result.totalUpserted} data dari ${result.tables.length} tabel`,
+          { id: toastId },
+        )
+      } else {
+        toast.error(`Restore gagal: ${result.error ?? "unknown error"}`, { id: toastId })
+      }
+    } catch (err: any) {
+      toast.error(`Restore gagal: ${err?.message ?? err}`, { id: toastId })
+    } finally {
+      setPulling(false)
+      loadStatus()
+    }
   }
 
   async function handleExport() {
@@ -69,9 +99,16 @@ export function SyncStatusPage() {
         </Card>
       </div>
 
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <Button onClick={handleManualSync} disabled={connectionStatus !== "online"}>
           Sinkronkan Sekarang
+        </Button>
+        <Button
+          variant="outline"
+          onClick={handlePull}
+          disabled={pulling || connectionStatus !== "online"}
+        >
+          {pulling ? "Menarik data..." : "Restore dari Cloud"}
         </Button>
         <Button variant="outline" onClick={handleExport}>
           Export Database

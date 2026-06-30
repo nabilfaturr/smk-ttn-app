@@ -1,10 +1,14 @@
 import { useAuthStore } from "../../stores/authStore"
 import { useUIStore } from "../../stores/uiStore"
 import { Menu } from "lucide-react"
+import { SyncStatusBadge } from "./SyncStatusBadge"
+import { useSyncStatus } from "@/hooks/useSyncStatus"
 
 export function Header() {
   const { user } = useAuthStore()
   const { toggleSidebar } = useUIStore()
+
+  useSyncStatus()
 
   return (
     <header className="flex h-14 items-center justify-between border-b bg-white px-6">
@@ -21,6 +25,7 @@ export function Header() {
       </div>
 
       <div className="flex items-center gap-3">
+        <SyncStatusBadge />
         <span className="text-sm font-medium text-gray-900">
           {user?.nama || user?.username}
         </span>

@@ -152,6 +152,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // Sync
   syncGetStatus: () => ipcRenderer.invoke("sync:getStatus"),
   syncTriggerManualSync: () => ipcRenderer.invoke("sync:triggerManualSync"),
+  syncPullFromCloud: () => ipcRenderer.invoke("sync:pullFromCloud"),
   syncExportDatabase: () => ipcRenderer.invoke("sync:exportDatabase"),
 
   // Dialog

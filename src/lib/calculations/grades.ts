@@ -48,5 +48,5 @@ export function generateNarasiKokurikuler(
     .filter(Boolean)
     .map((s) => s.trim().replace(/\.+$/, ""))
   if (sentences.length === 0) return ""
-  return sentences.join(". ") + "."
+  return sentences.join(". ")
 }

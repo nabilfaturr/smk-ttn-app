@@ -74,3 +74,6 @@ my-session-*.json
 # Local data
 /data/
 /tmp/
+
+# Personal reading references (untracked, local only)
+/read/

@@ -77,3 +77,4 @@ my-session-*.json
 
 # Personal reading references (untracked, local only)
 /read/
+AGENTS.md

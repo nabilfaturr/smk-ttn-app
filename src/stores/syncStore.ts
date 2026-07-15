@@ -7,6 +7,14 @@ export type SyncBadgeStatus =
   | "error"
   | "offline"
   | "unconfigured"
+  | "pulling"
+
+export type StartupPullResult = {
+  success: boolean
+  totalUpserted: number
+  error?: string
+  completedAt: string
+} | null
 
 interface SyncState {
   connectionStatus: "online" | "offline" | "checking"
@@ -15,12 +23,16 @@ interface SyncState {
   lastSync: string | null
   firebaseConfigured: boolean
   syncing: boolean
+  startupPullInProgress: boolean
+  startupPullResult: StartupPullResult
   setConnectionStatus: (status: "online" | "offline" | "checking") => void
   setPendingCount: (count: number) => void
   setFailedCount: (count: number) => void
   setLastSync: (timestamp: string | null) => void
   setFirebaseConfigured: (configured: boolean) => void
   setSyncing: (syncing: boolean) => void
+  setStartupPullInProgress: (inProgress: boolean) => void
+  setStartupPullResult: (result: StartupPullResult) => void
 }
 
 export const useSyncStore = create<SyncState>((set) => ({
@@ -30,10 +42,14 @@ export const useSyncStore = create<SyncState>((set) => ({
   lastSync: null,
   firebaseConfigured: false,
   syncing: false,
+  startupPullInProgress: false,
+  startupPullResult: null,
   setConnectionStatus: (status) => set({ connectionStatus: status }),
   setPendingCount: (count) => set({ pendingCount: count }),
   setFailedCount: (count) => set({ failedCount: count }),
   setLastSync: (timestamp) => set({ lastSync: timestamp }),
   setFirebaseConfigured: (configured) => set({ firebaseConfigured: configured }),
   setSyncing: (syncing) => set({ syncing }),
+  setStartupPullInProgress: (inProgress) => set({ startupPullInProgress: inProgress }),
+  setStartupPullResult: (result) => set({ startupPullResult: result }),
 }))

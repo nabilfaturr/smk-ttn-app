@@ -1,5 +1,5 @@
 import { useSyncStore, type SyncBadgeStatus } from "@/stores/syncStore"
-import { CheckCircle2, AlertCircle, Loader2, CloudOff, Cloud, XCircle } from "lucide-react"
+import { CheckCircle2, AlertCircle, Loader2, CloudOff, Cloud, XCircle, Download } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 function formatRelative(iso: string | null): string {
@@ -21,9 +21,11 @@ function deriveStatus(
   pendingCount: number,
   failedCount: number,
   syncing: boolean,
-  lastSync: string | null,
+  _lastSync: string | null,
+  startupPullInProgress: boolean,
 ): SyncBadgeStatus {
   if (!firebaseConfigured) return "unconfigured"
+  if (startupPullInProgress) return "pulling"
   if (!online) return "offline"
   if (failedCount > 0) return "error"
   if (syncing) return "syncing"
@@ -51,6 +53,12 @@ const STATUS_CONFIG: Record<
     icon: Loader2,
     spin: true,
   },
+  pulling: {
+    label: () => "Tarik data dari cloud...",
+    className: "bg-violet-50 text-violet-700 border-violet-200",
+    icon: Download,
+    spin: true,
+  },
   pending: {
     label: (p) => `${p} data belum sync`,
     className: "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100",
@@ -74,8 +82,16 @@ const STATUS_CONFIG: Record<
 }
 
 export function SyncStatusBadge() {
-  const { connectionStatus, pendingCount, failedCount, lastSync, firebaseConfigured, syncing } =
-    useSyncStore()
+  const {
+    connectionStatus,
+    pendingCount,
+    failedCount,
+    lastSync,
+    firebaseConfigured,
+    syncing,
+    startupPullInProgress,
+    startupPullResult,
+  } = useSyncStore()
 
   const status = deriveStatus(
     connectionStatus === "online",
@@ -84,21 +100,24 @@ export function SyncStatusBadge() {
     failedCount,
     syncing,
     lastSync,
+    startupPullInProgress,
   )
 
   const config = STATUS_CONFIG[status]
   const Icon = config.icon
 
+  const title = (() => {
+    if (status === "unconfigured") return "Sync nonaktif — konfigurasi di Settings → Firebase Sync"
+    if (status === "offline") return "Tidak ada koneksi internet"
+    if (status === "pulling") return "Menarik data terbaru dari cloud..."
+    if (startupPullResult && !startupPullResult.success) return `Startup pull gagal: ${startupPullResult.error ?? "unknown"}`
+    return "Lihat detail di Sinkronisasi"
+  })()
+
   return (
     <button
       type="button"
-      title={
-        status === "unconfigured"
-          ? "Sync nonaktif — konfigurasi di Settings → Firebase Sync"
-          : status === "offline"
-            ? "Tidak ada koneksi internet"
-            : "Lihat detail di Sinkronisasi"
-      }
+      title={title}
       className={cn(
         "inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-xs font-medium transition-colors",
         config.className,

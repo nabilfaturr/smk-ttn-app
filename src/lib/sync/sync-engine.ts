@@ -134,6 +134,68 @@ export function stopSyncEngine() {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Startup pull — auto-pull dari Firestore saat app start            */
+/* ------------------------------------------------------------------ */
+
+let startupPullInProgress = false
+let startupPullResult: { success: boolean; totalUpserted: number; error?: string; completedAt: string } | null = null
+let startupListeners: Array<() => void> = []
+
+/**
+ * Auto-pull dari cloud saat app start.
+ *
+ * Tujuan: catch up state lokal dengan cloud setelah app restart.
+ * Cuma jalan sekali per app launch.
+ *
+ * @returns PullResult — caller (renderer) bisa cek success/error
+ */
+export async function pullOnStartup(): Promise<PullResult> {
+  if (startupPullInProgress) {
+    return { success: false, totalFetched: 0, totalUpserted: 0, tables: [], error: "Startup pull already in progress" }
+  }
+  startupPullInProgress = true
+  notifyStartupListeners()
+
+  try {
+    const result = await pullFromFirestore()
+    startupPullResult = {
+      success: result.success,
+      totalUpserted: result.totalUpserted,
+      error: result.error,
+      completedAt: new Date().toISOString(),
+    }
+    return result
+  } finally {
+    startupPullInProgress = false
+    notifyStartupListeners()
+  }
+}
+
+export function getStartupPullState() {
+  return {
+    inProgress: startupPullInProgress,
+    result: startupPullResult,
+  }
+}
+
+export function onStartupPullChange(callback: () => void): () => void {
+  startupListeners.push(callback)
+  return () => {
+    startupListeners = startupListeners.filter((l) => l !== callback)
+  }
+}
+
+function notifyStartupListeners() {
+  for (const l of startupListeners) {
+    try {
+      l()
+    } catch (err) {
+      console.error("[startup-pull] listener error:", err)
+    }
+  }
+}
+
+/* ------------------------------------------------------------------ */
 /*  Sync cycle: process pending records                                */
 /* ------------------------------------------------------------------ */
 
@@ -251,6 +313,10 @@ export type SyncStatus = {
   pendingCount: number
   failedCount: number
   lastSync: string | null
+  startupPull: {
+    inProgress: boolean
+    result: { success: boolean; totalUpserted: number; error?: string; completedAt: string } | null
+  }
   recentLogs: Array<{
     id: string
     tabel: string
@@ -292,6 +358,7 @@ export function getSyncStatus(): SyncStatus {
     pendingCount: pending.length,
     failedCount: failed.length,
     lastSync: lastSuccess?.synced_at ?? null,
+    startupPull: getStartupPullState(),
     recentLogs: recentLogs.map((l) => ({
       id: l.id,
       tabel: l.tabel,
@@ -320,11 +387,14 @@ import { getDocs, collection } from "firebase/firestore"
 import { getFirestoreDb } from "./firebase-config"
 
 /**
- * Daftar tabel master yang di-pull dari Firestore.
+ * Daftar tabel yang di-pull dari Firestore (master + transaksional).
  * Urutan penting: parent dulu, baru yang punya FK.
  * (Tabel tanpa FK bisa dipull duluan tanpa error FK constraint.)
+ *
+ * Tabel transaksional ditambahkan di akhir karena punya FK ke master.
  */
 const PULLABLE_TABLES: Array<{ name: string; schema: any; hasId: boolean }> = [
+  // Master (parent first)
   { name: "users", schema: users, hasId: true },
   { name: "tahun_ajaran", schema: tahunAjaran, hasId: true },
   { name: "info_sekolah", schema: infoSekolah, hasId: true },
@@ -338,6 +408,16 @@ const PULLABLE_TABLES: Array<{ name: string; schema: any; hasId: boolean }> = [
   { name: "kelas", schema: kelas, hasId: true },
   { name: "mapel_kelas_guru", schema: mapelKelasGuru, hasId: true },
   { name: "siswa", schema: siswa, hasId: true },
+  // Transaksional (depend on master)
+  { name: "tujuan_pembelajaran", schema: tujuanPembelajaran, hasId: true },
+  { name: "absensi", schema: absensi, hasId: true },
+  { name: "nilai", schema: nilai, hasId: true },
+  { name: "nilai_tp", schema: nilaiTp, hasId: true },
+  { name: "nilai_prakerin", schema: nilaiPrakerin, hasId: true },
+  { name: "absensi_prakerin", schema: absensiPrakerin, hasId: true },
+  { name: "nilai_ekskul", schema: nilaiEkskul, hasId: true },
+  { name: "nilai_kokurikuler", schema: nilaiKokurikuler, hasId: true },
+  { name: "catatan_wali_kelas", schema: catatanWaliKelas, hasId: true },
 ]
 
 export type PullResult = {
@@ -388,8 +468,8 @@ export async function pullFromFirestore(
       for (const docSnap of docs) {
         const data = docSnap.data() as Record<string, any>
         // Firestore doc ID kita set sebagai string dari SQLite id (di pushToFirestore)
-        // Pakai ID dari data kalau ada, fallback ke doc id
-        const id = hasId && data.id != null ? Number(data.id) : null
+        // Pakai ID dari data kalau ada. Schema sekarang pakai UUID (text), jadi jangan Number().
+        const id = hasId && data.id != null ? String(data.id) : null
 
         // Strip undefined values (Drizzle gak terima undefined)
         const cleanData: Record<string, any> = {}
@@ -405,7 +485,6 @@ export async function pullFromFirestore(
               set: cleanData,
             }).run()
           } else {
-            // Insert (tabel tanpa id autoincrement — gak ada di master)
             sqlite.insert(schema).values(cleanData).run()
           }
           upserted++

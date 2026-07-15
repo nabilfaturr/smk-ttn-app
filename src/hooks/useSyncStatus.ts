@@ -14,6 +14,8 @@ export function useSyncStatus() {
     setFailedCount,
     setLastSync,
     setFirebaseConfigured,
+    setStartupPullInProgress,
+    setStartupPullResult,
   } = useSyncStore()
 
   useEffect(() => {
@@ -29,6 +31,10 @@ export function useSyncStatus() {
         setFailedCount(res.failedCount ?? 0)
         setLastSync(res.lastSync ?? null)
         setFirebaseConfigured(!!res.firebaseConfigured)
+        if (res.startupPull) {
+          setStartupPullInProgress(!!res.startupPull.inProgress)
+          setStartupPullResult(res.startupPull.result ?? null)
+        }
       } catch {
         // silent — main process not ready, or window closed
       }
@@ -40,5 +46,13 @@ export function useSyncStatus() {
       mounted = false
       clearInterval(id)
     }
-  }, [setConnectionStatus, setPendingCount, setFailedCount, setLastSync, setFirebaseConfigured])
+  }, [
+    setConnectionStatus,
+    setPendingCount,
+    setFailedCount,
+    setLastSync,
+    setFirebaseConfigured,
+    setStartupPullInProgress,
+    setStartupPullResult,
+  ])
 }

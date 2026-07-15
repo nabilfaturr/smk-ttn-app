@@ -1,5 +1,12 @@
 import { ipcMain, dialog } from "electron"
-import { getSyncStatus, triggerManualSync, exportDatabase, pullFromFirestore } from "../../src/lib/sync/sync-engine"
+import {
+  getSyncStatus,
+  triggerManualSync,
+  exportDatabase,
+  pullFromFirestore,
+  pullOnStartup,
+  getStartupPullState,
+} from "../../src/lib/sync/sync-engine"
 
 ipcMain.handle("sync:getStatus", async () => {
   try {
@@ -7,6 +14,14 @@ ipcMain.handle("sync:getStatus", async () => {
   } catch (error: any) {
     return { error: error.message }
   }
+})
+
+ipcMain.handle("sync:getStartupPullState", async () => {
+  return getStartupPullState()
+})
+
+ipcMain.handle("sync:triggerStartupPull", async () => {
+  return await pullOnStartup()
 })
 
 ipcMain.handle("sync:triggerManualSync", async () => {

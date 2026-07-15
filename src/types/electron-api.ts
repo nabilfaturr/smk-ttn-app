@@ -1,82 +1,82 @@
 export interface ElectronAPI {
   // Auth
-  login: (username: string, password: string) => Promise<{ id: number; username: string; role: string } | { error: string }>
+  login: (username: string, password: string) => Promise<{ id: string; username: string; role: string } | { error: string }>
   logout: () => Promise<void>
-  changePassword: (userId: number, oldPassword: string, newPassword: string) => Promise<{ success: boolean } | { error: string }>
+  changePassword: (userId: string, oldPassword: string, newPassword: string) => Promise<{ success: boolean } | { error: string }>
 
   // Students
   studentCreate: (data: any) => Promise<any>
-  studentUpdate: (id: number, data: any) => Promise<any>
-  studentDelete: (id: number) => Promise<any>
+  studentUpdate: (id: string, data: any) => Promise<any>
+  studentDelete: (id: string) => Promise<any>
   studentGetAll: () => Promise<any[]>
-  studentGetById: (id: number) => Promise<any>
-  studentCheckNis: (params: { nis: string; excludeId?: number }) => Promise<
-    { available: true } | { available: false; existingId: number; existingNama: string } | { error: string }
+  studentGetById: (id: string) => Promise<any>
+  studentCheckNis: (params: { nis: string; excludeId?: string }) => Promise<
+    { available: true } | { available: false; existingId: string; existingNama: string } | { error: string }
   >
 
   // Teachers
   teacherCreate: (data: any) => Promise<any>
-  teacherUpdate: (id: number, data: any) => Promise<any>
-  teacherDelete: (id: number) => Promise<any>
+  teacherUpdate: (id: string, data: any) => Promise<any>
+  teacherDelete: (id: string) => Promise<any>
   teacherGetAll: () => Promise<any[]>
-  teacherGetById: (id: number) => Promise<any>
+  teacherGetById: (id: string) => Promise<any>
 
   // Classes
   classCreate: (data: any) => Promise<any>
-  classUpdate: (id: number, data: any) => Promise<any>
-  classDelete: (id: number) => Promise<any>
+  classUpdate: (id: string, data: any) => Promise<any>
+  classDelete: (id: string) => Promise<any>
   classGetAll: () => Promise<any[]>
 
   // Subjects
   subjectCreate: (data: any) => Promise<any>
-  subjectUpdate: (id: number, data: any) => Promise<any>
-  subjectDelete: (id: number) => Promise<any>
+  subjectUpdate: (id: string, data: any) => Promise<any>
+  subjectDelete: (id: string) => Promise<any>
   subjectGetAll: () => Promise<any[]>
 
   // Academic Years
   academicYearCreate: (data: any) => Promise<any>
-  academicYearUpdate: (id: number, data: any) => Promise<any>
-  academicYearDelete: (id: number) => Promise<any>
+  academicYearUpdate: (id: string, data: any) => Promise<any>
+  academicYearDelete: (id: string) => Promise<any>
   academicYearGetAll: () => Promise<any[]>
 
   // Attendance
-  attendanceGetByClassAndDate: (kelasId: number, tanggal: string, jamPelajaran: number) => Promise<any[]>
+  attendanceGetByClassAndDate: (kelasId: string, tanggal: string, jamPelajaran: number) => Promise<any[]>
   attendanceSave: (data: any[]) => Promise<{ success: boolean }>
-  attendanceGetRecap: (kelasId: number, tanggalMulai: string, tanggalSelesai: string) => Promise<any[]>
-  attendanceConvertToDays: (kelasId: number, tanggalMulai: string, tanggalSelesai: string) => Promise<any>
+  attendanceGetRecap: (kelasId: string, tanggalMulai: string, tanggalSelesai: string) => Promise<any[]>
+  attendanceConvertToDays: (kelasId: string, tanggalMulai: string, tanggalSelesai: string) => Promise<any>
 
   // Grades
-  gradeGetByMapelAndClass: (mapelId: number, kelasId: number, tahunAjaranId: number) => Promise<any[]>
+  gradeGetByMapelAndClass: (mapelId: string, kelasId: string, tahunAjaranId: string) => Promise<any[]>
   gradeSave: (data: any) => Promise<{ success: boolean }>
-  gradeGetPrakerin: (siswaId: number, tahunAjaranId: number) => Promise<any>
+  gradeGetPrakerin: (siswaId: string, tahunAjaranId: string) => Promise<any>
   gradeSavePrakerin: (data: any) => Promise<{ success: boolean }>
-  gradeGetKetarunaan: (tahunAjaranId: number) => Promise<any[]>
+  gradeGetKetarunaan: (tahunAjaranId: string) => Promise<any[]>
   gradeSaveKetarunaan: (data: any) => Promise<{ success: boolean }>
-  gradeGetEkskul: (tahunAjaranId: number) => Promise<any[]>
+  gradeGetEkskul: (tahunAjaranId: string) => Promise<any[]>
   gradeSaveEkskul: (data: any) => Promise<{ success: boolean }>
-  gradeGetKokurikuler: (siswaId: number, tahunAjaranId: number) => Promise<any[]>
+  gradeGetKokurikuler: (siswaId: string, tahunAjaranId: string) => Promise<any[]>
   gradeSaveKokurikuler: (data: any) => Promise<{ success: boolean }>
-  kokurikulerGetByKelas: (kelasId: number, tahunAjaranId: number) => Promise<{
-    dimensi: Array<{ dimensi_id: number; nama: string; subdimensi: Array<{ id: number; nama: string; dimensi_id: number }> }>
+  kokurikulerGetByKelas: (kelasId: string, tahunAjaranId: string) => Promise<{
+    dimensi: Array<{ dimensi_id: string; nama: string; subdimensi: Array<{ id: string; nama: string; dimensi_id: string }> }>
     grades: Record<string, number>
   }>
 
   // TP
   tpCreate: (data: any) => Promise<any>
-  tpUpdate: (id: number, data: any) => Promise<any>
-  tpDelete: (id: number) => Promise<any>
-  tpGetByMapel: (mapelId: number) => Promise<any[]>
+  tpUpdate: (id: string, data: any) => Promise<any>
+  tpDelete: (id: string) => Promise<any>
+  tpGetByMapel: (mapelId: string) => Promise<any[]>
 
   // Teacher Notes
   teacherNoteSave: (data: any) => Promise<{ success: boolean }>
-  teacherNoteGetBySiswa: (siswaId: number, tahunAjaranId: number) => Promise<any>
+  teacherNoteGetBySiswa: (siswaId: string, tahunAjaranId: string) => Promise<any>
 
   // Reports
-  reportGenerateAkademik: (siswaId: number, kelasId: number, tahunAjaranId: number) => Promise<string>
-  reportGeneratePrakerin: (siswaId: number, tahunAjaranId: number) => Promise<string>
-  reportGenerateBatchAkademik: (kelasId: number, tahunAjaranId: number) => Promise<string[]>
+  reportGenerateAkademik: (siswaId: string, kelasId: string, tahunAjaranId: string) => Promise<string>
+  reportGeneratePrakerin: (siswaId: string, tahunAjaranId: string) => Promise<string>
+  reportGenerateBatchAkademik: (kelasId: string, tahunAjaranId: string) => Promise<string[]>
   reportSaveToFolder: (filePaths: string[], destinationFolder: string) => Promise<{ success: boolean }>
-  reportCheckCompleteness: (kelasId: number, tahunAjaranId: number) => Promise<any[]>
+  reportCheckCompleteness: (kelasId: string, tahunAjaranId: string) => Promise<any[]>
   reportGetRaporDir: () => Promise<string>
 
   // Config
@@ -89,6 +89,8 @@ export interface ElectronAPI {
   syncGetStatus: () => Promise<any>
   syncTriggerManualSync: () => Promise<{ success: boolean }>
   syncPullFromCloud: () => Promise<{ success: boolean; totalFetched: number; totalUpserted: number; tables: Array<{ name: string; fetched: number; upserted: number; error?: string }>; error?: string }>
+  syncGetStartupPullState: () => Promise<{ inProgress: boolean; result: { success: boolean; totalUpserted: number; error?: string; completedAt: string } | null }>
+  syncTriggerStartupPull: () => Promise<{ success: boolean; totalFetched: number; totalUpserted: number; tables: Array<{ name: string; fetched: number; upserted: number; error?: string }>; error?: string }>
   syncExportDatabase: () => Promise<string | null>
 
   // Dialog

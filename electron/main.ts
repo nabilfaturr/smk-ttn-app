@@ -48,7 +48,7 @@ function createWindow() {
 
 import { initDatabase } from "../src/lib/db"
 import { loadOrCreateDeviceId } from "../src/lib/db/ids"
-import { startSyncEngine } from "../src/lib/sync/sync-engine"
+import { startSyncEngine, pullOnStartup } from "../src/lib/sync/sync-engine"
 import "./ipc/auth.handlers"
 import "./ipc/arsip.handlers"
 import "./ipc/student.handlers"
@@ -70,8 +70,19 @@ app.whenReady().then(() => {
   const deviceId = loadOrCreateDeviceId()
   console.log(`[main] device-id: ${deviceId}`)
   initDatabase()
-  // Start background sync engine (interval 30 detik)
+  // Start background sync engine (push interval 30 detik)
   startSyncEngine()
+  // Auto-pull dari Firestore saat startup (BUG-08 fix).
+  // Non-blocking: jalan di background sambil UI render.
+  pullOnStartup()
+    .then((res) => {
+      if (res.success) {
+        console.log(`[main] startup pull: ✓ ${res.totalUpserted} rows synced`)
+      } else {
+        console.warn(`[main] startup pull: skipped/failed — ${res.error ?? "no rows"}`)
+      }
+    })
+    .catch((err) => console.error("[main] startup pull error:", err))
   createWindow()
 
   app.on("activate", () => {

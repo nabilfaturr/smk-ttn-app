@@ -4,12 +4,13 @@ import { getDb } from "../../src/lib/db"
 import { users, guru, kelas } from "../../src/lib/db/schema"
 import { eq, or } from "drizzle-orm"
 import crypto from "crypto"
+import { pullFromFirestore } from "../../src/lib/sync/sync-engine"
 
 function generateKodeLogin(): string {
   return crypto.randomInt(10000, 99999).toString()
 }
 
-export function getOrCreateKodeLogin(db: ReturnType<typeof getDb>, userId: number): string {
+export function getOrCreateKodeLogin(db: ReturnType<typeof getDb>, userId: string): string {
   const user = db.select().from(users).where(eq(users.id, userId)).get()
   if (!user) throw new Error("User not found")
   if (user.kode_login) return user.kode_login
@@ -21,14 +22,37 @@ export function getOrCreateKodeLogin(db: ReturnType<typeof getDb>, userId: numbe
   return kode
 }
 
+/**
+ * Attempt to find user in local SQLite.
+ * Returns user row or null.
+ */
+function findUserLocal(username: string) {
+  const db = getDb()
+  return db
+    .select()
+    .from(users)
+    .where(or(eq(users.kode_login, username), eq(users.username, username)))
+    .get()
+}
+
 ipcMain.handle("auth:login", async (_event, { username, password }: { username: string; password: string }) => {
   try {
-    const db = getDb()
-    const user = db
-      .select()
-      .from(users)
-      .where(or(eq(users.kode_login, username), eq(users.username, username)))
-      .get()
+    let user = findUserLocal(username)
+
+    // BUG-01 fix: kalau user gak ada di local, coba pull dari cloud dulu
+    // (mis. admin create guru di device lain, guru baru pertama kali login)
+    if (!user) {
+      console.log(`[auth:login] user "${username}" not found locally, attempting cloud pull…`)
+      try {
+        const pullResult = await pullFromFirestore()
+        if (pullResult.success && pullResult.totalUpserted > 0) {
+          user = findUserLocal(username)
+        }
+      } catch (pullErr) {
+        console.warn("[auth:login] cloud pull failed during login fallback:", pullErr)
+      }
+    }
+
     if (!user) return { error: "Kode Login / Username atau password salah" }
 
     const valid = bcrypt.compareSync(password, user.password)
@@ -36,7 +60,6 @@ ipcMain.handle("auth:login", async (_event, { username, password }: { username: 
 
     const roles = user.role.split(",")
     let additionalData: Record<string, any> = {}
-    let kelas_id: number | undefined
 
     if (roles.includes("wali_kelas") || roles.includes("guru")) {
       const g = db.select().from(guru).where(eq(guru.user_id, user.id)).get()

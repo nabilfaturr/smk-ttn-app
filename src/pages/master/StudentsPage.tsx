@@ -171,7 +171,7 @@ export function StudentsPage() {
 
     const payload = {
       ...values,
-      kelas_id: values.kelas_id ? Number(values.kelas_id) : null,
+      kelas_id: values.kelas_id || null,
       anak_ke: values.anak_ke ? Number(values.anak_ke) : null,
       jlh_sdr_kandung: values.jlh_sdr_kandung ? Number(values.jlh_sdr_kandung) : null,
     }

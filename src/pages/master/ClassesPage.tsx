@@ -92,7 +92,7 @@ export function ClassesPage() {
     const payload: Record<string, any> = {
       ...values,
       tingkat: Number(values.tingkat),
-      wali_kelas_id: values.wali_kelas_id ? Number(values.wali_kelas_id) : null,
+      wali_kelas_id: values.wali_kelas_id || null,
     }
     // Auto-set TA ke active untuk create. Edit: pertahankan TA original.
     if (editItem) {

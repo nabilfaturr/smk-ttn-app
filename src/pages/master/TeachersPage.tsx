@@ -95,7 +95,12 @@ export function TeachersPage() {
 
   async function handleDelete() {
     if (!deleteItem) return
-    await window.electronAPI.teacherDelete(deleteItem.id)
+    const result = await window.electronAPI.teacherDelete(deleteItem.id)
+    if (result?.error) {
+      toast.error(`Gagal hapus guru: ${result.error}`)
+    } else {
+      toast.success(`Guru ${deleteItem.nama} berhasil dihapus`)
+    }
     setDeleteItem(null)
     load()
   }

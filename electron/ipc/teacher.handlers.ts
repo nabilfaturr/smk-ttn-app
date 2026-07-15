@@ -52,12 +52,11 @@ ipcMain.handle("teacher:delete", async (_event, id) => {
   try {
     const db = getDb()
     const g = db.select().from(guru).where(eq(guru.id, id)).get()
-    if (g) {
-      db.delete(users).where(eq(users.id, g.user_id)).run()
-      addToSyncLog("users", g.user_id, "delete")
-    }
+    if (!g) return { success: true }
     db.delete(guru).where(eq(guru.id, id)).run()
     addToSyncLog("guru", id, "delete")
+    db.delete(users).where(eq(users.id, g.user_id)).run()
+    addToSyncLog("users", g.user_id, "delete")
     return { success: true }
   } catch (error: any) {
     return { error: error.message }

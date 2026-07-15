@@ -61,6 +61,12 @@ export function MapelAssignmentPage() {
     loadMaster()
   }, [loadMaster])
 
+  useEffect(() => {
+    if (selectedMapel && subjects.length > 0 && !subjects.find((s) => String(s.id) === selectedMapel)) {
+      setSelectedMapel("")
+    }
+  }, [subjects, selectedMapel])
+
   const loadAssignment = useCallback(async () => {
     if (!selectedMapel || !tahunAjaranId) return
     setLoading(true)

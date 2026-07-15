@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, real, unique } from "drizzle-orm/sqlite-core"
+import { sqliteTable, text, integer, real, unique, index } from "drizzle-orm/sqlite-core"
 import { generateId, getDeviceId } from "./ids"
 
 /**
@@ -487,21 +487,32 @@ export const konfigurasi = sqliteTable("konfigurasi", {
 })
 
 // 22. sync_log (meta, NOT synced)
-export const syncLog = sqliteTable("sync_log", {
-  id: text("id").primaryKey().$defaultFn(() => generateId()),
-  tabel: text("tabel").notNull(),
-  record_id: text("record_id").notNull(),
-  action: text("action", { enum: ["insert", "update", "delete"] }).notNull(),
-  synced_at: text("synced_at").notNull(),
-  status: text("status", { enum: ["success", "failed", "pending", "dead_letter"] }).notNull(),
-  retry_count: integer("retry_count").notNull().default(0),
-  next_retry_at: text("next_retry_at"),
-  last_error: text("last_error"),
-  updated_at: text("updated_at")
-    .notNull()
-    .$defaultFn(() => new Date().toISOString())
-    .$onUpdateFn(() => new Date().toISOString()),
-})
+//
+// Index untuk query yang sering:
+// - idx_sync_log_status_synced_at: cleanup query (status=success AND synced_at < ?)
+// - idx_sync_log_status_next_retry: retry query (status=failed AND next_retry_at <= ?)
+export const syncLog = sqliteTable(
+  "sync_log",
+  {
+    id: text("id").primaryKey().$defaultFn(() => generateId()),
+    tabel: text("tabel").notNull(),
+    record_id: text("record_id").notNull(),
+    action: text("action", { enum: ["insert", "update", "delete"] }).notNull(),
+    synced_at: text("synced_at").notNull(),
+    status: text("status", { enum: ["success", "failed", "pending", "dead_letter"] }).notNull(),
+    retry_count: integer("retry_count").notNull().default(0),
+    next_retry_at: text("next_retry_at"),
+    last_error: text("last_error"),
+    updated_at: text("updated_at")
+      .notNull()
+      .$defaultFn(() => new Date().toISOString())
+      .$onUpdateFn(() => new Date().toISOString()),
+  },
+  (table) => ({
+    statusSyncedAtIdx: index("idx_sync_log_status_synced_at").on(table.status, table.synced_at),
+    statusNextRetryIdx: index("idx_sync_log_status_next_retry").on(table.status, table.next_retry_at),
+  }),
+)
 
 // 23. mapel_kelas_guru (junction: guru pengampu per mapel per kelas per TA)
 export const mapelKelasGuru = sqliteTable(

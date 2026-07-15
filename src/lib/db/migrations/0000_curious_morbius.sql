@@ -278,6 +278,8 @@ CREATE TABLE `sync_log` (
 	`updated_at` text NOT NULL
 );
 --> statement-breakpoint
+CREATE INDEX `idx_sync_log_status_synced_at` ON `sync_log` (`status`,`synced_at`);--> statement-breakpoint
+CREATE INDEX `idx_sync_log_status_next_retry` ON `sync_log` (`status`,`next_retry_at`);--> statement-breakpoint
 CREATE TABLE `tahun_ajaran` (
 	`id` text PRIMARY KEY NOT NULL,
 	`nama` text NOT NULL,

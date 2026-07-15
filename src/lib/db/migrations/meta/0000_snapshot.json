@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "96042cb5-dcd2-4fe1-a41d-d2b623149420",
+  "id": "54fb3408-ad09-40a5-b2bf-5d3a8d6283f1",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "absensi": {
@@ -1966,7 +1966,24 @@
           "autoincrement": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "idx_sync_log_status_synced_at": {
+          "name": "idx_sync_log_status_synced_at",
+          "columns": [
+            "status",
+            "synced_at"
+          ],
+          "isUnique": false
+        },
+        "idx_sync_log_status_next_retry": {
+          "name": "idx_sync_log_status_next_retry",
+          "columns": [
+            "status",
+            "next_retry_at"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},

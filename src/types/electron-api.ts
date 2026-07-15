@@ -94,6 +94,7 @@ export interface ElectronAPI {
   syncGetListenerState: () => Promise<{ started: boolean; stats: { started: boolean; subscriptions: number; listeners: number } }>
   syncStartListener: () => Promise<{ success: boolean; error?: string }>
   syncStopListener: () => Promise<{ success: boolean }>
+  syncCleanup: (options?: { retentionDays?: number; dryRun?: boolean }) => Promise<{ success: boolean; deleted?: number; beforeTotal?: number; afterTotal?: number; error?: string }>
   syncExportDatabase: () => Promise<string | null>
   onSyncDataChanged: (callback: (event: { type: string; table: string; id: string; timestamp: number }) => void) => () => void
 

@@ -158,6 +158,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   syncGetListenerState: () => ipcRenderer.invoke("sync:getListenerState"),
   syncStartListener: () => ipcRenderer.invoke("sync:startListener"),
   syncStopListener: () => ipcRenderer.invoke("sync:stopListener"),
+  syncCleanup: (options?: { retentionDays?: number; dryRun?: boolean }) =>
+    ipcRenderer.invoke("sync:cleanup", options),
   syncExportDatabase: () => ipcRenderer.invoke("sync:exportDatabase"),
   // Real-time listener: subscribe ke event perubahan data dari Firestore
   onSyncDataChanged: (callback: (event: { type: string; table: string; id: string; timestamp: number }) => void) => {

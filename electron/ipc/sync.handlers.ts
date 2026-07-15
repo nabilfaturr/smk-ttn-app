@@ -13,6 +13,7 @@ import {
   isListenerStarted,
   getListenerStats,
 } from "../../src/lib/sync/listener-engine"
+import { runCleanup } from "../../scripts/sync-cleanup"
 
 ipcMain.handle("sync:getStatus", async () => {
   try {
@@ -44,6 +45,15 @@ ipcMain.handle("sync:startListener", async () => {
 ipcMain.handle("sync:stopListener", async () => {
   stopListener()
   return { success: true }
+})
+
+ipcMain.handle("sync:cleanup", async (_event, options?: { retentionDays?: number; dryRun?: boolean }) => {
+  try {
+    const result = await runCleanup(options?.retentionDays ?? 30, options?.dryRun ?? false)
+    return { success: true, ...result }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
 })
 
 ipcMain.handle("sync:triggerManualSync", async () => {

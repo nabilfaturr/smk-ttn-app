@@ -11,7 +11,6 @@ export function SyncStatusPage() {
     pendingCount,
     failedCount,
     deadLetterCount,
-    lastSync,
     setConnectionStatus,
     setPendingCount,
     setLastSync,
@@ -84,6 +83,30 @@ export function SyncStatusPage() {
     loadStatus()
   }
 
+  async function handleCleanup() {
+    const ok = confirm(
+      "Cleanup akan menghapus sync_log row berstatus 'success' yang lebih dari 30 hari.\n\n" +
+        "Lanjutkan? (Row pending/failed/dead_letter TIDAK akan dihapus)",
+    )
+    if (!ok) return
+
+    const toastId = toast.loading("Membersihkan sync_log...")
+    try {
+      const result = await window.electronAPI.syncCleanup({ retentionDays: 30 })
+      if (result.success) {
+        toast.success(
+          `Cleanup selesai: ${result.deleted ?? 0} row dihapus (sisa: ${result.afterTotal ?? 0})`,
+          { id: toastId },
+        )
+        loadStatus()
+      } else {
+        toast.error(`Cleanup gagal: ${result.error ?? "unknown"}`, { id: toastId })
+      }
+    } catch (err: any) {
+      toast.error(`Cleanup gagal: ${err?.message ?? err}`, { id: toastId })
+    }
+  }
+
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-semibold">Sinkronisasi</h2>
@@ -133,6 +156,9 @@ export function SyncStatusPage() {
           disabled={pulling || connectionStatus !== "online"}
         >
           {pulling ? "Menarik data..." : "Restore dari Cloud"}
+        </Button>
+        <Button variant="outline" onClick={handleCleanup}>
+          Cleanup Log Lama
         </Button>
         <Button variant="outline" onClick={handleExport}>
           Export Database

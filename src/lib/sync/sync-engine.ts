@@ -199,7 +199,7 @@ function notifyStartupListeners() {
 /*  Sync cycle: process pending + retry-failed records                 */
 /* ------------------------------------------------------------------ */
 
-import { and, lte, or } from "drizzle-orm"
+import { and, desc, lte, or, sql } from "drizzle-orm"
 import { getRetryDecision } from "./retry-strategy"
 
 const BATCH_SIZE = 20
@@ -356,6 +356,7 @@ export type SyncStatus = {
   pendingCount: number
   failedCount: number
   deadLetterCount: number
+  successCount: number
   lastSync: string | null
   startupPull: {
     inProgress: boolean
@@ -373,42 +374,49 @@ export type SyncStatus = {
 
 export function getSyncStatus(): SyncStatus {
   const db = getDb()
-  const pending = db
-    .select()
-    .from(syncLog)
-    .where(eq(syncLog.status, "pending"))
-    .all()
-  const failed = db
-    .select()
-    .from(syncLog)
-    .where(eq(syncLog.status, "failed"))
-    .all()
-  const deadLetter = db
-    .select()
-    .from(syncLog)
-    .where(eq(syncLog.status, "dead_letter"))
-    .all()
-  const successAll = db
+
+  // count(*) lebih cepat dari .all().length karena tidak load row ke memory
+  const countByStatus = (status: typeof syncLog.$inferSelect.status): number => {
+    const res = db
+      .select({ count: sql<number>`count(*)` })
+      .from(syncLog)
+      .where(eq(syncLog.status, status))
+      .all()
+    return res[0]?.count ?? 0
+  }
+
+  const pendingCount = countByStatus("pending")
+  const failedCount = countByStatus("failed")
+  const deadLetterCount = countByStatus("dead_letter")
+  const successCount = countByStatus("success")
+
+  // Last successful sync: ambil 1 row paling baru
+  const lastSuccessRow = db
     .select()
     .from(syncLog)
     .where(eq(syncLog.status, "success"))
+    .orderBy(desc(syncLog.synced_at))
+    .limit(1)
     .all()
-  const lastSuccess = successAll[successAll.length - 1]
+  const lastSuccess = lastSuccessRow[0]?.synced_at ?? null
+
+  // Recent logs: 10 terakhir by updated_at (lebih akurat dari synced_at)
   const recentLogs = db
     .select()
     .from(syncLog)
+    .orderBy(desc(syncLog.updated_at))
+    .limit(10)
     .all()
-    .slice(-10)
-    .reverse()
 
   return {
     online: isOnline(),
     firebaseConfigured: isFirebaseConfigured(),
-    pendingCount: pending.length,
-    failedCount: failed.length,
-    deadLetterCount: deadLetter.length,
-    lastSync: lastSuccess?.synced_at ?? null,
+    pendingCount,
+    failedCount,
+    deadLetterCount,
+    lastSync: lastSync,
     startupPull: getStartupPullState(),
+    successCount, // bonus: untuk display di UI
     recentLogs: recentLogs.map((l) => ({
       id: l.id,
       tabel: l.tabel,

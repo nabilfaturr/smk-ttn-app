@@ -5,7 +5,7 @@ export interface Migration {
 
 export const migrations: Migration[] = [
   {
-    name: "0000_many_argent",
+    name: "0000_curious_morbius",
     sql: `CREATE TABLE \`absensi\` (
 	\`id\` text PRIMARY KEY NOT NULL,
 	\`siswa_id\` text NOT NULL,
@@ -286,6 +286,8 @@ CREATE TABLE \`sync_log\` (
 	\`updated_at\` text NOT NULL
 );
 --> statement-breakpoint
+CREATE INDEX \`idx_sync_log_status_synced_at\` ON \`sync_log\` (\`status\`,\`synced_at\`);--> statement-breakpoint
+CREATE INDEX \`idx_sync_log_status_next_retry\` ON \`sync_log\` (\`status\`,\`next_retry_at\`);--> statement-breakpoint
 CREATE TABLE \`tahun_ajaran\` (
 	\`id\` text PRIMARY KEY NOT NULL,
 	\`nama\` text NOT NULL,

@@ -28,7 +28,9 @@
     "db:seed:full": "tsx scripts/seed/index.ts --mode=full",
     "db:seed:reset": "tsx scripts/seed/index.ts --reset",
     "db:fresh:full": "tsx scripts/seed/index.ts --reset --mode=full --force",
-    "db:fresh:default": "tsx scripts/seed/index.ts --reset --mode=default --force"
+    "db:fresh:default": "tsx scripts/seed/index.ts --reset --mode=default --force",
+    "sync:cleanup": "tsx scripts/sync-cleanup.ts",
+    "build:embedded-migrations": "node scripts/build-embedded-migrations.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",

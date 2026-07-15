@@ -5,23 +5,24 @@ import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { Save, Info } from "lucide-react"
 
-type SubdimensiItem = { subdimensi_id: number; nama: string; grade: number | null }
-type DimensiItem = { dimensi_id: number; nama: string; subdimensi: SubdimensiItem[] }
+type SubdimensiItem = { id: string; subdimensi_id: string; nama: string; grade: number | null }
+type DimensiItem = { dimensi_id: string; nama: string; subdimensi: SubdimensiItem[] }
 
-type SiswaRow = { id: number; nama: string }
+type SiswaRow = { id: string; nama: string }
 
 /**
  * State untuk grade per siswa per subdimensi.
- * Key: `${siswaId}-${subdimensiId}` → value: grade (1, 2, 3, atau null)
+ * Nested structure (avoid delimiter issues dengan UUID yang mengandung "-").
+ * grades[siswaId][subdimensiId] = 1 | 2 | 3 | null
  */
-type GradeMap = Record<string, number | null>
+type GradeMap = Record<string, Record<string, number | null>>
 
 export function KokurikulerPage() {
   const [kelasList, setKelasList] = useState<any[]>([])
   const [selectedKelas, setSelectedKelas] = useState("")
   const [siswaList, setSiswaList] = useState<SiswaRow[]>([])
   const [dimensi, setDimensi] = useState<DimensiItem[]>([])
-  const [tahunAjaran, setTahunAjaran] = useState(0)
+  const [tahunAjaran, setTahunAjaran] = useState("")
   const [grades, setGrades] = useState<GradeMap>({})
   const [dirty, setDirty] = useState(false)
 
@@ -33,7 +34,7 @@ export function KokurikulerPage() {
     if (Array.isArray(k)) setKelasList(k)
     if (Array.isArray(t)) {
       const aktif = t.find((y: any) => y.is_active)
-      if (aktif) setTahunAjaran(aktif.id)
+      if (aktif) setTahunAjaran(String(aktif.id))
     }
   }, [])
 
@@ -73,53 +74,54 @@ export function KokurikulerPage() {
       return
     }
     setDimensi(result.dimensi)
-    setGrades(result.grades)
+    setGrades(flatToNested(result.grades))
     setDirty(false)
   }, [selectedKelas, tahunAjaran])
 
   useEffect(() => { loadAllGrades() }, [loadAllGrades])
 
-  function updateGrade(siswaId: number, subdimensiId: number, value: string) {
-    const key = `${siswaId}-${subdimensiId}`
-    // Pakai "-" sebagai placeholder non-empty. Convert ke null on change.
+  function flatToNested(flat: Record<string, number | null>): GradeMap {
+    const nested: GradeMap = {}
+    for (const [key, grade] of Object.entries(flat)) {
+      const sepIdx = key.indexOf("|")
+      if (sepIdx < 0) continue
+      const siswaId = key.slice(0, sepIdx)
+      const subdimensiId = key.slice(sepIdx + 1)
+      if (!nested[siswaId]) nested[siswaId] = {}
+      nested[siswaId][subdimensiId] = grade
+    }
+    return nested
+  }
+
+  function updateGrade(siswaId: string, subdimensiId: string, value: string) {
     const grade = value === "-" ? null : Number(value)
-    setGrades((prev) => ({ ...prev, [key]: grade }))
+    setGrades((prev) => ({
+      ...prev,
+      [siswaId]: { ...(prev[siswaId] ?? {}), [subdimensiId]: grade },
+    }))
     setDirty(true)
   }
 
   async function handleSave() {
     if (siswaList.length === 0 || !tahunAjaran) return
 
-    const gradesPerSiswa: Record<number, Array<{ subdimensiId: number; grade: number }>> = {}
-    for (const s of siswaList) {
-      gradesPerSiswa[s.id] = []
-    }
-
-    // Kumpulkan semua grades per siswa
-    for (const [key, grade] of Object.entries(grades)) {
-      if (grade == null) continue
-      const [siswaIdStr, subdimensiIdStr] = key.split("-")
-      const siswaId = Number(siswaIdStr)
-      const subdimensiId = Number(subdimensiIdStr)
-      if (gradesPerSiswa[siswaId]) {
-        gradesPerSiswa[siswaId].push({ subdimensiId, grade })
-      }
-    }
-
-    // Save per siswa (1 IPC call per siswa)
     let saved = 0
-    for (const [siswaIdStr, siswaGrades] of Object.entries(gradesPerSiswa)) {
-      if (siswaGrades.length === 0) continue
+    for (const [siswaId, siswaGrades] of Object.entries(grades)) {
+      const gradesArr = Object.entries(siswaGrades)
+        .filter(([, g]) => g != null)
+        .map(([subdimensiId, grade]) => ({ subdimensiId, grade: grade as number }))
+      if (gradesArr.length === 0) continue
       await window.electronAPI.gradeSaveKokurikuler({
-        siswaId: Number(siswaIdStr),
+        siswaId,
         tahunAjaranId: tahunAjaran,
-        grades: siswaGrades,
+        grades: gradesArr,
       })
       saved++
     }
 
     toast.success(`Nilai kokurikuler disimpan untuk ${saved} siswa`)
     setDirty(false)
+    loadAllGrades()
   }
 
   return (
@@ -201,13 +203,8 @@ export function KokurikulerPage() {
                             {s.nama}
                           </td>
                           {d.subdimensi.map((sd) => {
-                            // BUG FIX: pakai `sd.id` (bukan `sd.subdimensi_id` yang undefined).
-                            // Sebelumnya key jadi "181-undefined" untuk semua subdimensi siswa
-                            // yang sama, sehingga 1 klik update semua cell.
-                            const subdimensiId = sd.id
-                            const key = `${s.id}-${subdimensiId}`
-                            const currentVal = grades[key]
-                            // Pakai "-" sebagai placeholder. null → "-"
+                            const subdimensiId = sd.id ?? sd.subdimensi_id
+                            const currentVal = grades[s.id]?.[subdimensiId]
                             const displayVal = currentVal == null ? "-" : String(currentVal)
                             return (
                               <td key={subdimensiId} className="p-2">

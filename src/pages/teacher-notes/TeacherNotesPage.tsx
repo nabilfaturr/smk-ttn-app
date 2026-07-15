@@ -11,9 +11,9 @@ export function TeacherNotesPage() {
   const [kelasList, setKelasList] = useState<any[]>([])
   const [selectedKelas, setSelectedKelas] = useState("")
   const [siswa, setSiswa] = useState<any[]>([])
-  const [selectedSiswa, setSelectedSiswa] = useState<number | null>(null)
+  const [selectedSiswa, setSelectedSiswa] = useState<string | null>(null)
   const [catatan, setCatatan] = useState("")
-  const [tahunAjaran, setTahunAjaran] = useState(0)
+  const [tahunAjaran, setTahunAjaran] = useState("")
 
   const load = useCallback(async () => {
     const [k, t] = await Promise.all([window.electronAPI.classGetAll(), window.electronAPI.academicYearGetAll()])
@@ -25,7 +25,7 @@ export function TeacherNotesPage() {
         setKelasList(k)
       }
     }
-    if (Array.isArray(t)) { const aktif = t.find((y: any) => y.is_active); if (aktif) setTahunAjaran(aktif.id) }
+    if (Array.isArray(t)) { const aktif = t.find((y: any) => y.is_active); if (aktif) setTahunAjaran(String(aktif.id)) }
   }, [user])
 
   useEffect(() => { load() }, [load])
@@ -73,10 +73,10 @@ export function TeacherNotesPage() {
         {siswa.length > 0 && (
           <div className="grid gap-1.5 max-w-xs">
             <Label>Siswa</Label>
-            <Select value={String(selectedSiswa ?? "")} onValueChange={(v) => setSelectedSiswa(Number(v))}>
+            <Select value={selectedSiswa ?? ""} onValueChange={setSelectedSiswa}>
               <SelectTrigger>
                 <SelectValue>
-                  {siswa.find((s) => String(s.id) === String(selectedSiswa ?? ""))?.nama ?? "Pilih siswa"}
+                  {siswa.find((s) => String(s.id) === selectedSiswa)?.nama ?? "Pilih siswa"}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>{siswa.map((s) => <SelectItem key={s.id} value={String(s.id)}>{s.nama}</SelectItem>)}</SelectContent>

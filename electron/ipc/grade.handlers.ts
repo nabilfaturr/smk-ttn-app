@@ -268,12 +268,15 @@ ipcMain.handle("grade:getKokurikuler", async (_event, { siswaId, tahunAjaranId }
  * Return shape:
  * {
  *   dimensi: [...],          // dimensi + subdimensi structure (sama dengan getBySiswa)
- *   grades: {               // Map key: `${siswaId}-${subdimensiId}` → grade (1|2|3|null)
- *     "1-1": 2,
- *     "1-2": 3,
+ *   grades: {               // Map key: `${siswaId}|${subdimensiId}` → grade (1|2|3|null)
+ *     "uuid1|uuid2": 2,
+ *     "uuid1|uuid3": 3,
  *     ...
  *   }
  * }
+ *
+ * Note: pakai "|" sebagai delimiter (bukan "-") karena UUID mengandung
+ * dashes, sehingga "${uuid1}-${uuid2}" tidak bisa di-split dengan benar.
  *
  * Lebih cepat dari N parallel calls karena:
  * - 1 IPC call (sebelumnya 30 calls untuk 30 siswa)
@@ -282,17 +285,14 @@ ipcMain.handle("grade:getKokurikuler", async (_event, { siswaId, tahunAjaranId }
 ipcMain.handle("kokurikuler:getByKelas", async (_event, { kelasId, tahunAjaranId }) => {
   try {
     const db = getDb()
-    // Cari tingkat kelas
     const k = db.select().from(kelasTable).where(eq(kelasTable.id, kelasId)).get()
     const tingkat = k?.tingkat
-    // Ambil subdimensi aktif untuk tingkat ini
     const activeSubIds = tingkat != null
       ? db.select().from(subdimensiP5Tingkat).where(eq(subdimensiP5Tingkat.tingkat, tingkat)).all().map((t) => t.subdimensi_id)
       : db.select().from(subdimensiP5).all().map((sd) => sd.id)
     const dims = db.select().from(dimensiP5).all()
     const subdimsAll = db.select().from(subdimensiP5).all()
     const subdims = subdimsAll.filter((sd) => activeSubIds.includes(sd.id))
-    // JOIN siswa + nilai_kokurikuler dalam 1 query
     const rows = db
       .select({
         siswa_id: nilaiKokurikuler.siswa_id,
@@ -306,7 +306,7 @@ ipcMain.handle("kokurikuler:getByKelas", async (_event, { kelasId, tahunAjaranId
     const grades: Record<string, number> = {}
     for (const r of rows) {
       if (r.grade != null) {
-        grades[`${r.siswa_id}-${r.subdimensi_id}`] = r.grade
+        grades[`${r.siswa_id}|${r.subdimensi_id}`] = r.grade
       }
     }
     return {

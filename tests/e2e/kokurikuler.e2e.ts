@@ -1,4 +1,4 @@
-import { test, expect, login } from "./fixtures/electron-fixture"
+import { test, expect, login, selectOption } from "./fixtures/electron-fixture"
 
 /**
  * Kokurikuler (P5) E2E - sesuai redesign SMK TTN:

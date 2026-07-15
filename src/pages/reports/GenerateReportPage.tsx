@@ -4,8 +4,9 @@ import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import { toast } from "sonner"
-import { FolderOpen, ExternalLink, Copy } from "lucide-react"
+import { FolderOpen, ExternalLink, Copy, AlertCircle } from "lucide-react"
 
 export function GenerateReportPage() {
   const [kelasList, setKelasList] = useState<any[]>([])
@@ -134,14 +135,39 @@ export function GenerateReportPage() {
           </CardHeader>
           <CardContent>
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              {completeness.map((c) => (
-                <div key={c.siswa_id} className="flex items-center gap-2 rounded-md border p-2">
-                  <span className="flex-1 text-sm font-medium">{c.nama}</span>
-                  <Badge variant={c.status === "lengkap" ? "default" : "secondary"}>
-                    {c.status === "lengkap" ? "Lengkap" : `${c.missingData.length} kurang`}
+              {completeness.map((c) => {
+                const isLengkap = c.status === "lengkap"
+                const badge = (
+                  <Badge variant={isLengkap ? "default" : "secondary"}>
+                    {isLengkap ? "Lengkap" : `${c.missingData.length} kurang`}
                   </Badge>
-                </div>
-              ))}
+                )
+                return (
+                  <div key={c.siswa_id} className="flex items-center gap-2 rounded-md border p-2">
+                    <span className="flex-1 text-sm font-medium">{c.nama}</span>
+                    {isLengkap ? (
+                      badge
+                    ) : (
+                      <Tooltip>
+                        <TooltipTrigger render={<span tabIndex={0}>{badge}</span>} />
+                        <TooltipContent className="max-w-[240px]">
+                          <div className="flex flex-col gap-1.5">
+                            <div className="flex items-center gap-1.5 font-semibold">
+                              <AlertCircle data-icon="inline-start" className="size-3.5" />
+                              Data yang belum lengkap
+                            </div>
+                            <ul className="m-0 list-inside list-disc pl-1 text-xs">
+                              {c.missingData.map((m: string) => (
+                                <li key={m}>{m}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+                  </div>
+                )
+              })}
             </div>
             <div className="mt-4">
               <Button onClick={handleGenerate} disabled={loading}>

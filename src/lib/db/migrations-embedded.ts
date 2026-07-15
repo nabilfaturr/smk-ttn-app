@@ -321,4 +321,78 @@ CREATE TABLE \`users\` (
 --> statement-breakpoint
 CREATE UNIQUE INDEX \`users_username_unique\` ON \`users\` (\`username\`);`,
   },
+  {
+    name: "0001_smk_ttn_schema_sync",
+    sql: `ALTER TABLE \`absensi\` ADD COLUMN \`device_id\` text NOT NULL DEFAULT '';
+--> statement-breakpoint
+ALTER TABLE \`absensi\` ADD COLUMN \`updated_at\` text NOT NULL DEFAULT '';
+--> statement-breakpoint
+ALTER TABLE \`absensi_prakerin\` ADD COLUMN \`device_id\` text NOT NULL DEFAULT '';
+--> statement-breakpoint
+ALTER TABLE \`absensi_prakerin\` ADD COLUMN \`updated_at\` text NOT NULL DEFAULT '';
+--> statement-breakpoint
+ALTER TABLE \`catatan_wali_kelas\` ADD COLUMN \`device_id\` text NOT NULL DEFAULT '';
+--> statement-breakpoint
+ALTER TABLE \`catatan_wali_kelas\` ADD COLUMN \`updated_at\` text NOT NULL DEFAULT '';
+--> statement-breakpoint
+ALTER TABLE \`dimensi_p5\` ADD COLUMN \`updated_at\` text NOT NULL DEFAULT '';
+--> statement-breakpoint
+ALTER TABLE \`ekskul\` ADD COLUMN \`updated_at\` text NOT NULL DEFAULT '';
+--> statement-breakpoint
+ALTER TABLE \`guru\` ADD COLUMN \`updated_at\` text NOT NULL DEFAULT '';
+--> statement-breakpoint
+ALTER TABLE \`info_sekolah\` ADD COLUMN \`updated_at\` text NOT NULL DEFAULT '';
+--> statement-breakpoint
+ALTER TABLE \`kelas\` ADD COLUMN \`updated_at\` text NOT NULL DEFAULT '';
+--> statement-breakpoint
+ALTER TABLE \`konfigurasi\` ADD COLUMN \`updated_at\` text NOT NULL DEFAULT '';
+--> statement-breakpoint
+ALTER TABLE \`mapel_kelas_guru\` ADD COLUMN \`updated_at\` text NOT NULL DEFAULT '';
+--> statement-breakpoint
+ALTER TABLE \`mata_pelajaran\` ADD COLUMN \`updated_at\` text NOT NULL DEFAULT '';
+--> statement-breakpoint
+ALTER TABLE \`nilai\` ADD COLUMN \`device_id\` text NOT NULL DEFAULT '';
+--> statement-breakpoint
+ALTER TABLE \`nilai\` ADD COLUMN \`updated_at\` text NOT NULL DEFAULT '';
+--> statement-breakpoint
+ALTER TABLE \`nilai_ekskul\` ADD COLUMN \`device_id\` text NOT NULL DEFAULT '';
+--> statement-breakpoint
+ALTER TABLE \`nilai_ekskul\` ADD COLUMN \`updated_at\` text NOT NULL DEFAULT '';
+--> statement-breakpoint
+ALTER TABLE \`nilai_ketarunaan\` ADD COLUMN \`device_id\` text NOT NULL DEFAULT '';
+--> statement-breakpoint
+ALTER TABLE \`nilai_ketarunaan\` ADD COLUMN \`updated_at\` text NOT NULL DEFAULT '';
+--> statement-breakpoint
+ALTER TABLE \`nilai_kokurikuler\` ADD COLUMN \`device_id\` text NOT NULL DEFAULT '';
+--> statement-breakpoint
+ALTER TABLE \`nilai_kokurikuler\` ADD COLUMN \`updated_at\` text NOT NULL DEFAULT '';
+--> statement-breakpoint
+ALTER TABLE \`nilai_prakerin\` ADD COLUMN \`device_id\` text NOT NULL DEFAULT '';
+--> statement-breakpoint
+ALTER TABLE \`nilai_prakerin\` ADD COLUMN \`updated_at\` text NOT NULL DEFAULT '';
+--> statement-breakpoint
+ALTER TABLE \`nilai_tp\` ADD COLUMN \`device_id\` text NOT NULL DEFAULT '';
+--> statement-breakpoint
+ALTER TABLE \`nilai_tp\` ADD COLUMN \`updated_at\` text NOT NULL DEFAULT '';
+--> statement-breakpoint
+ALTER TABLE \`siswa\` ADD COLUMN \`updated_at\` text NOT NULL DEFAULT '';
+--> statement-breakpoint
+ALTER TABLE \`subdimensi_p5\` ADD COLUMN \`updated_at\` text NOT NULL DEFAULT '';
+--> statement-breakpoint
+ALTER TABLE \`subdimensi_p5_tingkat\` ADD COLUMN \`updated_at\` text NOT NULL DEFAULT '';
+--> statement-breakpoint
+ALTER TABLE \`sync_log\` ADD COLUMN \`retry_count\` integer DEFAULT 0 NOT NULL;
+--> statement-breakpoint
+ALTER TABLE \`sync_log\` ADD COLUMN \`next_retry_at\` text;
+--> statement-breakpoint
+ALTER TABLE \`sync_log\` ADD COLUMN \`last_error\` text;
+--> statement-breakpoint
+ALTER TABLE \`sync_log\` ADD COLUMN \`updated_at\` text NOT NULL DEFAULT '';
+--> statement-breakpoint
+ALTER TABLE \`tahun_ajaran\` ADD COLUMN \`updated_at\` text NOT NULL DEFAULT '';
+--> statement-breakpoint
+ALTER TABLE \`tujuan_pembelajaran\` ADD COLUMN \`updated_at\` text NOT NULL DEFAULT '';
+--> statement-breakpoint
+ALTER TABLE \`users\` ADD COLUMN \`updated_at\` text NOT NULL DEFAULT '';`,
+  },
 ]

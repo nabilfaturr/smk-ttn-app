@@ -155,7 +155,16 @@ contextBridge.exposeInMainWorld("electronAPI", {
   syncPullFromCloud: () => ipcRenderer.invoke("sync:pullFromCloud"),
   syncGetStartupPullState: () => ipcRenderer.invoke("sync:getStartupPullState"),
   syncTriggerStartupPull: () => ipcRenderer.invoke("sync:triggerStartupPull"),
+  syncGetListenerState: () => ipcRenderer.invoke("sync:getListenerState"),
+  syncStartListener: () => ipcRenderer.invoke("sync:startListener"),
+  syncStopListener: () => ipcRenderer.invoke("sync:stopListener"),
   syncExportDatabase: () => ipcRenderer.invoke("sync:exportDatabase"),
+  // Real-time listener: subscribe ke event perubahan data dari Firestore
+  onSyncDataChanged: (callback: (event: { type: string; table: string; id: string; timestamp: number }) => void) => {
+    const handler = (_e: unknown, event: { type: string; table: string; id: string; timestamp: number }) => callback(event)
+    ipcRenderer.on("sync:data-changed", handler)
+    return () => ipcRenderer.removeListener("sync:data-changed", handler)
+  },
 
   // Dialog
   showSaveDialog: (options: any) => ipcRenderer.invoke("dialog:showSave", options),

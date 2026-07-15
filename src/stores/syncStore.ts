@@ -8,6 +8,7 @@ export type SyncBadgeStatus =
   | "offline"
   | "unconfigured"
   | "pulling"
+  | "listening"
 
 export type StartupPullResult = {
   success: boolean
@@ -15,6 +16,13 @@ export type StartupPullResult = {
   error?: string
   completedAt: string
 } | null
+
+export type SyncDataChangeEvent = {
+  type: "added" | "modified" | "removed"
+  table: string
+  id: string
+  timestamp: number
+}
 
 interface SyncState {
   connectionStatus: "online" | "offline" | "checking"
@@ -25,6 +33,8 @@ interface SyncState {
   syncing: boolean
   startupPullInProgress: boolean
   startupPullResult: StartupPullResult
+  listenerStarted: boolean
+  recentChanges: SyncDataChangeEvent[]
   setConnectionStatus: (status: "online" | "offline" | "checking") => void
   setPendingCount: (count: number) => void
   setFailedCount: (count: number) => void
@@ -33,7 +43,12 @@ interface SyncState {
   setSyncing: (syncing: boolean) => void
   setStartupPullInProgress: (inProgress: boolean) => void
   setStartupPullResult: (result: StartupPullResult) => void
+  setListenerStarted: (started: boolean) => void
+  pushRecentChange: (event: SyncDataChangeEvent) => void
+  clearRecentChanges: () => void
 }
+
+const MAX_RECENT_CHANGES = 20
 
 export const useSyncStore = create<SyncState>((set) => ({
   connectionStatus: "checking",
@@ -44,6 +59,8 @@ export const useSyncStore = create<SyncState>((set) => ({
   syncing: false,
   startupPullInProgress: false,
   startupPullResult: null,
+  listenerStarted: false,
+  recentChanges: [],
   setConnectionStatus: (status) => set({ connectionStatus: status }),
   setPendingCount: (count) => set({ pendingCount: count }),
   setFailedCount: (count) => set({ failedCount: count }),
@@ -52,4 +69,10 @@ export const useSyncStore = create<SyncState>((set) => ({
   setSyncing: (syncing) => set({ syncing }),
   setStartupPullInProgress: (inProgress) => set({ startupPullInProgress: inProgress }),
   setStartupPullResult: (result) => set({ startupPullResult: result }),
+  setListenerStarted: (started) => set({ listenerStarted: started }),
+  pushRecentChange: (event) =>
+    set((s) => ({
+      recentChanges: [event, ...s.recentChanges].slice(0, MAX_RECENT_CHANGES),
+    })),
+  clearRecentChanges: () => set({ recentChanges: [] }),
 }))

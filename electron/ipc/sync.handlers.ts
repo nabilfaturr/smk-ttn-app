@@ -7,6 +7,12 @@ import {
   pullOnStartup,
   getStartupPullState,
 } from "../../src/lib/sync/sync-engine"
+import {
+  startListener,
+  stopListener,
+  isListenerStarted,
+  getListenerStats,
+} from "../../src/lib/sync/listener-engine"
 
 ipcMain.handle("sync:getStatus", async () => {
   try {
@@ -22,6 +28,22 @@ ipcMain.handle("sync:getStartupPullState", async () => {
 
 ipcMain.handle("sync:triggerStartupPull", async () => {
   return await pullOnStartup()
+})
+
+ipcMain.handle("sync:getListenerState", async () => {
+  return {
+    started: isListenerStarted(),
+    stats: getListenerStats(),
+  }
+})
+
+ipcMain.handle("sync:startListener", async () => {
+  return startListener()
+})
+
+ipcMain.handle("sync:stopListener", async () => {
+  stopListener()
+  return { success: true }
 })
 
 ipcMain.handle("sync:triggerManualSync", async () => {

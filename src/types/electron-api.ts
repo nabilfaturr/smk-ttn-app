@@ -91,7 +91,11 @@ export interface ElectronAPI {
   syncPullFromCloud: () => Promise<{ success: boolean; totalFetched: number; totalUpserted: number; tables: Array<{ name: string; fetched: number; upserted: number; error?: string }>; error?: string }>
   syncGetStartupPullState: () => Promise<{ inProgress: boolean; result: { success: boolean; totalUpserted: number; error?: string; completedAt: string } | null }>
   syncTriggerStartupPull: () => Promise<{ success: boolean; totalFetched: number; totalUpserted: number; tables: Array<{ name: string; fetched: number; upserted: number; error?: string }>; error?: string }>
+  syncGetListenerState: () => Promise<{ started: boolean; stats: { started: boolean; subscriptions: number; listeners: number } }>
+  syncStartListener: () => Promise<{ success: boolean; error?: string }>
+  syncStopListener: () => Promise<{ success: boolean }>
   syncExportDatabase: () => Promise<string | null>
+  onSyncDataChanged: (callback: (event: { type: string; table: string; id: string; timestamp: number }) => void) => () => void
 
   // Dialog
   showSaveDialog: (options: any) => Promise<any>

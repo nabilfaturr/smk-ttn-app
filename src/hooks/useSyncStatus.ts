@@ -16,6 +16,7 @@ export function useSyncStatus() {
     setFirebaseConfigured,
     setStartupPullInProgress,
     setStartupPullResult,
+    setListenerStarted,
   } = useSyncStore()
 
   useEffect(() => {
@@ -40,8 +41,23 @@ export function useSyncStatus() {
       }
     }
 
+    async function pollListener() {
+      if (!mounted) return
+      try {
+        const res = await window.electronAPI.syncGetListenerState?.()
+        if (!mounted || !res) return
+        setListenerStarted(!!res.started)
+      } catch {
+        // silent
+      }
+    }
+
     poll()
-    const id = setInterval(poll, POLL_INTERVAL_MS)
+    pollListener()
+    const id = setInterval(() => {
+      poll()
+      pollListener()
+    }, POLL_INTERVAL_MS)
     return () => {
       mounted = false
       clearInterval(id)
@@ -54,5 +70,6 @@ export function useSyncStatus() {
     setFirebaseConfigured,
     setStartupPullInProgress,
     setStartupPullResult,
+    setListenerStarted,
   ])
 }

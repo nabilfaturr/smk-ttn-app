@@ -1,5 +1,5 @@
 import { useSyncStore, type SyncBadgeStatus } from "@/stores/syncStore"
-import { CheckCircle2, AlertCircle, Loader2, CloudOff, Cloud, XCircle, Download } from "lucide-react"
+import { CheckCircle2, AlertCircle, Loader2, CloudOff, Cloud, XCircle, Download, Radio } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 function formatRelative(iso: string | null): string {
@@ -23,12 +23,14 @@ function deriveStatus(
   syncing: boolean,
   _lastSync: string | null,
   startupPullInProgress: boolean,
+  listenerStarted: boolean,
 ): SyncBadgeStatus {
   if (!firebaseConfigured) return "unconfigured"
   if (startupPullInProgress) return "pulling"
   if (!online) return "offline"
   if (failedCount > 0) return "error"
   if (syncing) return "syncing"
+  if (listenerStarted) return "listening"
   if (pendingCount > 0) return "pending"
   return "synced"
 }
@@ -52,6 +54,11 @@ const STATUS_CONFIG: Record<
     className: "bg-blue-50 text-blue-700 border-blue-200",
     icon: Loader2,
     spin: true,
+  },
+  listening: {
+    label: () => "Real-time aktif",
+    className: "bg-cyan-50 text-cyan-700 border-cyan-200",
+    icon: Radio,
   },
   pulling: {
     label: () => "Tarik data dari cloud...",
@@ -91,6 +98,7 @@ export function SyncStatusBadge() {
     syncing,
     startupPullInProgress,
     startupPullResult,
+    listenerStarted,
   } = useSyncStore()
 
   const status = deriveStatus(
@@ -101,6 +109,7 @@ export function SyncStatusBadge() {
     syncing,
     lastSync,
     startupPullInProgress,
+    listenerStarted,
   )
 
   const config = STATUS_CONFIG[status]
@@ -110,6 +119,7 @@ export function SyncStatusBadge() {
     if (status === "unconfigured") return "Sync nonaktif — konfigurasi di Settings → Firebase Sync"
     if (status === "offline") return "Tidak ada koneksi internet"
     if (status === "pulling") return "Menarik data terbaru dari cloud..."
+    if (status === "listening") return "Real-time listener aktif — perubahan di cloud langsung terlihat"
     if (startupPullResult && !startupPullResult.success) return `Startup pull gagal: ${startupPullResult.error ?? "unknown"}`
     return "Lihat detail di Sinkronisasi"
   })()

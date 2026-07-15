@@ -2,11 +2,22 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { useSyncStore } from "@/stores/syncStore"
+import { useSyncStore, type SyncDataChangeEvent } from "@/stores/syncStore"
 import { toast } from "sonner"
 
 export function SyncStatusPage() {
-  const { connectionStatus, pendingCount, lastSync, setConnectionStatus, setPendingCount, setLastSync, setFailedCount, setFirebaseConfigured } = useSyncStore()
+  const {
+    connectionStatus,
+    pendingCount,
+    lastSync,
+    setConnectionStatus,
+    setPendingCount,
+    setLastSync,
+    setFailedCount,
+    setFirebaseConfigured,
+    listenerStarted,
+    recentChanges,
+  } = useSyncStore()
   const [logs, setLogs] = useState<any[]>([])
   const [pulling, setPulling] = useState(false)
 
@@ -145,6 +156,48 @@ export function SyncStatusPage() {
                 </tbody>
               </table>
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {recentChanges.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <span>Perubahan Real-time</span>
+              {listenerStarted && <Badge variant="outline" className="bg-cyan-50 text-cyan-700">Listener aktif</Badge>}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="rounded-md border">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-muted/50">
+                    <th className="p-2 text-left">Tabel</th>
+                    <th className="p-2 text-left">Tipe</th>
+                    <th className="p-2 text-left">ID</th>
+                    <th className="p-2 text-left">Waktu</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentChanges.map((change: SyncDataChangeEvent, i) => (
+                    <tr key={`${change.id}-${change.timestamp}-${i}`} className="border-b last:border-0">
+                      <td className="p-2">{change.table}</td>
+                      <td className="p-2">
+                        <Badge variant={change.type === "added" ? "default" : change.type === "modified" ? "secondary" : "destructive"}>
+                          {change.type}
+                        </Badge>
+                      </td>
+                      <td className="p-2 font-mono text-xs">{change.id.slice(0, 12)}…</td>
+                      <td className="p-2 text-xs text-muted-foreground">{new Date(change.timestamp).toLocaleTimeString("id-ID")}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Perubahan di tabel dari cloud — refetch halaman untuk lihat data terbaru.
+            </p>
           </CardContent>
         </Card>
       )}

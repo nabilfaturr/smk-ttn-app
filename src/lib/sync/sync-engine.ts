@@ -420,6 +420,14 @@ const PULLABLE_TABLES: Array<{ name: string; schema: any; hasId: boolean }> = [
   { name: "catatan_wali_kelas", schema: catatanWaliKelas, hasId: true },
 ]
 
+/**
+ * Lighter list untuk listener engine — cuma butuh nama collection.
+ * (Schema gak dipakai di onSnapshot, jadi pisah aja biar tidak duplikat.)
+ */
+export const PULLABLE_TABLES_FOR_LISTENER: Array<{ name: string }> = PULLABLE_TABLES.map((t) => ({
+  name: t.name,
+}))
+
 export type PullResult = {
   success: boolean
   totalFetched: number

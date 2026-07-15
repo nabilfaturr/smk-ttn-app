@@ -10,6 +10,7 @@ import { AlertTriangle } from "lucide-react"
 import { toast } from "sonner"
 import { dedupeTahunAjarans, type AcademicYear } from "@/lib/utils/tahun-ajaran"
 import { translateDbError } from "@/lib/utils/db-error"
+import { useDataInvalidation } from "@/hooks/useDataInvalidation"
 
 type Student = {
   id: number
@@ -62,6 +63,10 @@ export function StudentsPage() {
   }, [])
 
   useEffect(() => { load() }, [load])
+
+  // Real-time: refetch saat ada perubahan di table siswa/kelas/tahun_ajaran
+  const { bumpVersion } = useDataInvalidation(["siswa", "kelas", "tahun_ajaran"])
+  useEffect(() => { load() }, [load, bumpVersion])
 
   // Filter kelas sesuai TA aktif
   const kelasInTa = useMemo(

@@ -49,6 +49,7 @@ function createWindow() {
 import { initDatabase } from "../src/lib/db"
 import { loadOrCreateDeviceId } from "../src/lib/db/ids"
 import { startSyncEngine, pullOnStartup } from "../src/lib/sync/sync-engine"
+import { startListener, setListenerMainWindow } from "../src/lib/sync/listener-engine"
 import "./ipc/auth.handlers"
 import "./ipc/arsip.handlers"
 import "./ipc/student.handlers"
@@ -84,6 +85,13 @@ app.whenReady().then(() => {
     })
     .catch((err) => console.error("[main] startup pull error:", err))
   createWindow()
+
+  // Set mainWindow reference untuk real-time listener
+  // (listener push event ke renderer via mainWindow.webContents.send)
+  setListenerMainWindow(mainWindow)
+  // Start real-time listener (Firestore onSnapshot)
+  // Subscribe ke semua PULLABLE_TABLES — perubahan di cloud → IPC ke renderer
+  startListener()
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {

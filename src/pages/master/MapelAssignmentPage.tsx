@@ -155,7 +155,14 @@ export function MapelAssignmentPage() {
           <div className="max-w-2xl">
             <Select value={selectedMapel} onValueChange={setSelectedMapel}>
               <SelectTrigger className="h-10 w-full">
-                <SelectValue placeholder="Pilih mata pelajaran..." />
+                <SelectValue placeholder="Pilih mata pelajaran...">
+                  {selectedMapel
+                    ? (() => {
+                        const s = subjects.find((s) => String(s.id) === selectedMapel)
+                        return s ? `${s.kode_mapel} - ${s.nama_mapel}` : null
+                      })()
+                    : null}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {subjects.map((s) => (

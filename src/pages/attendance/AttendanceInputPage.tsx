@@ -60,7 +60,7 @@ export function AttendanceInputPage() {
     setSiswa(filtered)
 
     const existing = await window.electronAPI.attendanceGetByClassAndDate(
-      Number(selectedKelas),
+      selectedKelas,
       tanggal,
       Number(jam),
     )
@@ -97,7 +97,7 @@ export function AttendanceInputPage() {
     setLoading(true)
     const data = siswa.map((s) => ({
       siswaId: s.id,
-      kelasId: Number(selectedKelas),
+      kelasId: selectedKelas,
       tanggal,
       jamPelajaran: Number(jam),
       status: statuses[s.id] ?? "H",

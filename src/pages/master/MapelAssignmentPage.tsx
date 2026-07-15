@@ -65,7 +65,7 @@ export function MapelAssignmentPage() {
     if (!selectedMapel || !tahunAjaranId) return
     setLoading(true)
     const res = await window.electronAPI.mapelAssignmentGetByMapel(
-      Number(selectedMapel),
+      selectedMapel,
       tahunAjaranId,
     )
     if (Array.isArray(res)) {
@@ -102,7 +102,7 @@ export function MapelAssignmentPage() {
       guru_id: r.guru_id,
     }))
     const res = await window.electronAPI.mapelAssignmentBulkUpsert({
-      mapelId: Number(selectedMapel),
+      mapelId: selectedMapel,
       tahunAjaranId,
       assignments,
     })
@@ -225,7 +225,7 @@ export function MapelAssignmentPage() {
                             <Select
                               value={row.guru_id ? String(row.guru_id) : NIL_VALUE}
                               onValueChange={(v) =>
-                                updateGuru(row.kelas_id, v === NIL_VALUE ? null : Number(v))
+                                updateGuru(row.kelas_id, v === NIL_VALUE ? null : v)
                               }
                             >
                               <SelectTrigger className="h-9 max-w-md">

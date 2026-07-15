@@ -33,7 +33,7 @@ export function GenerateReportPage() {
 
   const checkCompleteness = useCallback(async () => {
     if (!selectedKelas || !tahunAjaran) return
-    const res = await window.electronAPI.reportCheckCompleteness(Number(selectedKelas), tahunAjaran)
+    const res = await window.electronAPI.reportCheckCompleteness(selectedKelas, tahunAjaran)
     if (Array.isArray(res)) setCompleteness(res)
   }, [selectedKelas, tahunAjaran])
 
@@ -43,7 +43,7 @@ export function GenerateReportPage() {
     setLoading(true)
     try {
       if (jenisRapor === "akademik") {
-        const res = await window.electronAPI.reportGenerateBatchAkademik(Number(selectedKelas), tahunAjaran)
+        const res = await window.electronAPI.reportGenerateBatchAkademik(selectedKelas, tahunAjaran)
         if (Array.isArray(res)) {
           setGeneratedFiles(res)
           toast.success(`${res.length} rapor berhasil di-generate`, {

@@ -70,8 +70,8 @@ export function LearningObjectivesPage() {
   const loadTp = useCallback(async () => {
     if (!selectedMapel) return
     const res = await window.electronAPI.tpGetByMapel(
-      Number(selectedMapel),
-      selectedTa ? Number(selectedTa) : undefined,
+      selectedMapel,
+      selectedTa || undefined,
     )
     if (Array.isArray(res)) setTpList(res)
   }, [selectedMapel, selectedTa])
@@ -99,8 +99,8 @@ export function LearningObjectivesPage() {
       return
     }
     const payload = {
-      mapel_id: Number(selectedMapel),
-      tahun_ajaran_id: Number(selectedTa),
+      mapel_id: selectedMapel,
+      tahun_ajaran_id: selectedTa,
       ...values,
     }
     if (editItem) {

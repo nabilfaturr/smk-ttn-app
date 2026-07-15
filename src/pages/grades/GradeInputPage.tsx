@@ -72,7 +72,7 @@ export function GradeInputPage() {
   useEffect(() => {
     if (!selectedMapel) return
     window.electronAPI
-      .tpGetByMapel(Number(selectedMapel), tahunAjaran || undefined)
+      .tpGetByMapel(selectedMapel, tahunAjaran || undefined)
       .then((res) => {
         if (Array.isArray(res)) setTpList(res)
       })
@@ -92,7 +92,7 @@ export function GradeInputPage() {
       if (Array.isArray(assignments)) {
         const ids = new Set(
           (assignments as any[])
-            .filter((a) => a.mapel_id === Number(selectedMapel))
+            .filter((a) => a.mapel_id === selectedMapel)
             .map((a) => a.kelas_id),
         )
         setMyKelasIds(ids)
@@ -108,7 +108,7 @@ export function GradeInputPage() {
 
   const loadGrade = useCallback(async () => {
     if (!selectedMapel || !selectedKelas || !tahunAjaran) return
-    const res = await window.electronAPI.gradeGetByMapelAndClass(Number(selectedMapel), Number(selectedKelas), tahunAjaran)
+    const res = await window.electronAPI.gradeGetByMapelAndClass(selectedMapel, selectedKelas, tahunAjaran)
     if (Array.isArray(res)) setRows(res)
   }, [selectedMapel, selectedKelas, tahunAjaran])
 
@@ -161,7 +161,7 @@ export function GradeInputPage() {
     for (const r of rows) {
       await window.electronAPI.gradeSave({
         siswaId: r.siswa_id,
-        mapelId: Number(selectedMapel),
+        mapelId: selectedMapel,
         tahunAjaranId: tahunAjaran,
         nilaiFormatif: r.nilai_formatif,
         nilaiSumatif: r.nilai_sumatif,
@@ -173,7 +173,7 @@ export function GradeInputPage() {
     loadGrade()
   }
 
-  const mapel = subjects.find((s) => s.id === Number(selectedMapel))
+  const mapel = subjects.find((s) => s.id === selectedMapel)
 
   return (
     <div className="space-y-6">

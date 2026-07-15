@@ -47,7 +47,7 @@ export function ExtracurricularPage() {
     if (!selectedKelas || !tahunAjaranId) return
     setLoading(true)
     const res = await window.electronAPI.ekskulSiswaGetByKelas(
-      Number(selectedKelas),
+      selectedKelas,
       tahunAjaranId,
     )
     if (Array.isArray(res)) {

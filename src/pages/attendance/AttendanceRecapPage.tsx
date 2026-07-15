@@ -47,7 +47,7 @@ export function AttendanceRecapPage() {
   async function handleCari() {
     if (!selectedKelas || !tglMulai || !tglSelesai) return
     const [recap, siswaRes] = await Promise.all([
-      window.electronAPI.attendanceGetRecap(Number(selectedKelas), tglMulai, tglSelesai),
+      window.electronAPI.attendanceGetRecap(selectedKelas, tglMulai, tglSelesai),
       window.electronAPI.studentGetAll(),
     ])
     if (!Array.isArray(recap) || !Array.isArray(siswaRes)) return

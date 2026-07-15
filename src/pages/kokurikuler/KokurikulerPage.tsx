@@ -66,7 +66,7 @@ export function KokurikulerPage() {
       setGrades({})
       return
     }
-    const result = await window.electronAPI.kokurikulerGetByKelas(Number(selectedKelas), tahunAjaran)
+    const result = await window.electronAPI.kokurikulerGetByKelas(selectedKelas, tahunAjaran)
     if (result?.error || !result) {
       setDimensi([])
       setGrades({})

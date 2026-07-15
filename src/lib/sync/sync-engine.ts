@@ -121,8 +121,12 @@ function isOnline(): boolean {
 
 export function startSyncEngine() {
   if (syncInterval) return
+  console.log("[sync] starting interval (30s)")
   syncInterval = setInterval(() => {
-    runSyncCycle().catch((err) => console.error("[sync] cycle error:", err))
+    console.log("[sync] interval tick, running cycle...")
+    runSyncCycle()
+      .then((r) => console.log(`[sync] cycle done: processed=${r.processed} success=${r.success} failed=${r.failed}`))
+      .catch((err) => console.error("[sync] cycle error:", err))
   }, 30000)
 }
 
@@ -211,13 +215,22 @@ export async function runSyncCycle(): Promise<{ processed: number; success: numb
 
   try {
     const online = isOnline()
-    if (!online) return result
+    if (!online) {
+      console.log("[sync] skip cycle: offline")
+      return result
+    }
 
     // Init Firebase kalau belum
     const ok = initFirebase()
-    if (!ok) return result
+    if (!ok) {
+      console.log("[sync] skip cycle: Firebase init failed")
+      return result
+    }
 
     const db = getDb()
+    // Quick count check
+    const total = db.select().from(syncLog).all().length
+    console.log(`[sync] runSyncCycle: ${total} total rows in sync_log`)
     // Ambil record pending ATAU failed yang next_retry_at sudah lewat.
     // dead_letter di-skip (sudah menyerah).
     const now = new Date().toISOString()
@@ -414,7 +427,7 @@ export function getSyncStatus(): SyncStatus {
     pendingCount,
     failedCount,
     deadLetterCount,
-    lastSync: lastSync,
+    lastSync: lastSuccess,
     startupPull: getStartupPullState(),
     successCount, // bonus: untuk display di UI
     recentLogs: recentLogs.map((l) => ({

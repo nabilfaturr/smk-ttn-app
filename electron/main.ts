@@ -1,6 +1,12 @@
 import { app, BrowserWindow } from "electron"
 import path from "path"
 
+// Set app name early agar userData path konsisten
+// (default: "Electron" → userData di ~/.config/Electron, gak match dev/prod path)
+// Dev: ~/.config/smk-ttn-app/ (Linux), %APPDATA%\smk-ttn-app\ (Windows)
+// Prod: sama dengan dev (karena gak ada installer yang rename)
+app.setName("smk-ttn-app")
+
 let mainWindow: BrowserWindow | null = null
 
 const isDev = !app.isPackaged

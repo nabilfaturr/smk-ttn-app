@@ -30,6 +30,7 @@ function ensureDatabase(sqlite: Database.Database) {
 
 export function initDatabase() {
   const dbPath = path.join(app.getPath("userData"), "smk-ttn.db")
+  console.log(`[db] init: ${dbPath}`)
   const sqlite = new Database(dbPath)
   sqlite.pragma("journal_mode = WAL")
   sqlite.pragma("foreign_keys = ON")
@@ -38,6 +39,12 @@ export function initDatabase() {
 
   dbInstance = drizzle(sqlite, { schema })
   seedDatabase(dbInstance)
+
+  // Debug: count sync_log after init
+  try {
+    const cnt = sqlite.prepare("SELECT COUNT(*) as c FROM sync_log").get() as { c: number } | undefined
+    console.log(`[db] after init: ${cnt?.c ?? 0} rows in sync_log`)
+  } catch {}
 
   return dbInstance
 }

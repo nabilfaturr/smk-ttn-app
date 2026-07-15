@@ -37,6 +37,7 @@ function findUserLocal(username: string) {
 
 ipcMain.handle("auth:login", async (_event, { username, password }: { username: string; password: string }) => {
   try {
+    const db = getDb()
     let user = findUserLocal(username)
 
     // BUG-01 fix: kalau user gak ada di local, coba pull dari cloud dulu

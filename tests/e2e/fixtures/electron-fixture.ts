@@ -12,6 +12,9 @@ export const test = base.extend<{
         ...process.env,
         NODE_ENV: "test",
         ELECTRON_DISABLE_GPU: "1",
+        // Disable sync in E2E tests supaya gak benar-benar hit Firestore
+        // (Firestore data lama = pre-UUID migration = cause FK errors)
+        SMK_TTN_DISABLE_SYNC: "1",
       },
       timeout: 30_000,
     })

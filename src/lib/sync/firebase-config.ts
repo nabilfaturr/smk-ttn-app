@@ -42,6 +42,21 @@ let configLoaded = false
  * Hasil di-cache supaya tidak baca disk tiap kali.
  */
 export function getFirebaseConfig(): FirebaseConfig {
+  // Test mode override: SMK_TTN_DISABLE_SYNC=1 → return empty config
+  // Berguna untuk E2E test supaya gak benar-benar hit Firestore
+  if (typeof process !== "undefined" && process.env?.SMK_TTN_DISABLE_SYNC === "1") {
+    cachedConfig = {
+      apiKey: "",
+      authDomain: "",
+      projectId: "",
+      storageBucket: "",
+      messagingSenderId: "",
+      appId: "",
+    }
+    configLoaded = false
+    return cachedConfig
+  }
+
   if (configLoaded && firebaseApp) {
     return cachedConfig
   }

@@ -70,6 +70,7 @@ import "./ipc/firebase-config.handlers"
 app.whenReady().then(() => {
   const deviceId = loadOrCreateDeviceId()
   console.log(`[main] device-id: ${deviceId}`)
+  console.log(`[main] SMK_TTN_DISABLE_SYNC: ${process.env.SMK_TTN_DISABLE_SYNC ?? "(not set)"}`)
   initDatabase()
   // Start background sync engine (push interval 30 detik)
   startSyncEngine()

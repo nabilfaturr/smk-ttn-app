@@ -15,6 +15,9 @@ export function addToSyncLog(
         action,
         synced_at: new Date().toISOString(),
         status: "pending",
+        retry_count: 0,
+        next_retry_at: null,
+        last_error: null,
       })
       .run()
   } catch {

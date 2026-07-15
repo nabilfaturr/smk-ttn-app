@@ -493,7 +493,14 @@ export const syncLog = sqliteTable("sync_log", {
   record_id: text("record_id").notNull(),
   action: text("action", { enum: ["insert", "update", "delete"] }).notNull(),
   synced_at: text("synced_at").notNull(),
-  status: text("status", { enum: ["success", "failed", "pending"] }).notNull(),
+  status: text("status", { enum: ["success", "failed", "pending", "dead_letter"] }).notNull(),
+  retry_count: integer("retry_count").notNull().default(0),
+  next_retry_at: text("next_retry_at"),
+  last_error: text("last_error"),
+  updated_at: text("updated_at")
+    .notNull()
+    .$defaultFn(() => new Date().toISOString())
+    .$onUpdateFn(() => new Date().toISOString()),
 })
 
 // 23. mapel_kelas_guru (junction: guru pengampu per mapel per kelas per TA)

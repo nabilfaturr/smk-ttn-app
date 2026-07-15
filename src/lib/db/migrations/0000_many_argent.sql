@@ -271,7 +271,11 @@ CREATE TABLE `sync_log` (
 	`record_id` text NOT NULL,
 	`action` text NOT NULL,
 	`synced_at` text NOT NULL,
-	`status` text NOT NULL
+	`status` text NOT NULL,
+	`retry_count` integer DEFAULT 0 NOT NULL,
+	`next_retry_at` text,
+	`last_error` text,
+	`updated_at` text NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE `tahun_ajaran` (

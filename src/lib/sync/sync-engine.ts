@@ -196,15 +196,18 @@ function notifyStartupListeners() {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Sync cycle: process pending records                                */
+/*  Sync cycle: process pending + retry-failed records                 */
 /* ------------------------------------------------------------------ */
+
+import { and, lte, or } from "drizzle-orm"
+import { getRetryDecision } from "./retry-strategy"
 
 const BATCH_SIZE = 20
 
-export async function runSyncCycle(): Promise<{ processed: number; success: number; failed: number }> {
-  if (isRunning) return { processed: 0, success: 0, failed: 0 }
+export async function runSyncCycle(): Promise<{ processed: number; success: number; failed: number; retried: number; deadLetter: number }> {
+  if (isRunning) return { processed: 0, success: 0, failed: 0, retried: 0, deadLetter: 0 }
   isRunning = true
-  const result = { processed: 0, success: 0, failed: 0 }
+  const result = { processed: 0, success: 0, failed: 0, retried: 0, deadLetter: 0 }
 
   try {
     const online = isOnline()
@@ -215,15 +218,36 @@ export async function runSyncCycle(): Promise<{ processed: number; success: numb
     if (!ok) return result
 
     const db = getDb()
-    const pending = db
+    // Ambil record pending ATAU failed yang next_retry_at sudah lewat.
+    // dead_letter di-skip (sudah menyerah).
+    const now = new Date().toISOString()
+    const records = db
       .select()
       .from(syncLog)
-      .where(eq(syncLog.status, "pending"))
+      .where(
+        or(
+          eq(syncLog.status, "pending"),
+          and(
+            eq(syncLog.status, "failed"),
+            lte(syncLog.next_retry_at, now),
+          ),
+        ),
+      )
       .limit(BATCH_SIZE)
       .all()
 
-    for (const record of pending) {
+    for (const record of records) {
       result.processed++
+
+      // Track kalau ini retry (bukan fresh pending)
+      if (record.status === "failed") {
+        result.retried++
+        // Reset ke "pending" supaya tidak double-process
+        db.update(syncLog)
+          .set({ status: "pending" })
+          .where(eq(syncLog.id, record.id))
+          .run()
+      }
 
       if (EXCLUDED_TABLES.has(record.tabel)) {
         // Tabel yang tidak di-sync, langsung tandai success
@@ -237,12 +261,20 @@ export async function runSyncCycle(): Promise<{ processed: number; success: numb
 
       const tableRef = SYNCABLE_TABLES[record.tabel]
       if (!tableRef) {
-        // Tabel tidak dikenal, tandai failed
+        // Tabel tidak dikenal — mark failed dengan retry strategy
+        const decision = getRetryDecision(record.retry_count)
         db.update(syncLog)
-          .set({ status: "failed", synced_at: new Date().toISOString() })
+          .set({
+            status: decision.nextStatus,
+            synced_at: new Date().toISOString(),
+            retry_count: decision.retryCount,
+            next_retry_at: decision.nextRetryAt,
+            last_error: "Unknown table",
+          })
           .where(eq(syncLog.id, record.id))
           .run()
         result.failed++
+        if (decision.nextStatus === "dead_letter") result.deadLetter++
         continue
       }
 
@@ -269,12 +301,23 @@ export async function runSyncCycle(): Promise<{ processed: number; success: numb
           .run()
         result.success++
       } catch (err: any) {
-        console.error(`[sync] Failed to sync ${record.tabel}/${record.record_id}:`, err)
+        console.error(`[sync] Failed to sync ${record.tabel}/${record.record_id} (attempt ${record.retry_count + 1}):`, err?.message ?? err)
+        const decision = getRetryDecision(record.retry_count)
         db.update(syncLog)
-          .set({ status: "failed", synced_at: new Date().toISOString() })
+          .set({
+            status: decision.nextStatus,
+            synced_at: new Date().toISOString(),
+            retry_count: decision.retryCount,
+            next_retry_at: decision.nextRetryAt,
+            last_error: String(err?.message ?? err).slice(0, 500),
+          })
           .where(eq(syncLog.id, record.id))
           .run()
         result.failed++
+        if (decision.nextStatus === "dead_letter") {
+          result.deadLetter++
+          console.warn(`[sync] ${record.tabel}/${record.record_id} reached dead_letter after ${decision.retryCount} attempts`)
+        }
       }
     }
   } finally {
@@ -312,6 +355,7 @@ export type SyncStatus = {
   firebaseConfigured: boolean
   pendingCount: number
   failedCount: number
+  deadLetterCount: number
   lastSync: string | null
   startupPull: {
     inProgress: boolean
@@ -339,6 +383,11 @@ export function getSyncStatus(): SyncStatus {
     .from(syncLog)
     .where(eq(syncLog.status, "failed"))
     .all()
+  const deadLetter = db
+    .select()
+    .from(syncLog)
+    .where(eq(syncLog.status, "dead_letter"))
+    .all()
   const successAll = db
     .select()
     .from(syncLog)
@@ -357,6 +406,7 @@ export function getSyncStatus(): SyncStatus {
     firebaseConfigured: isFirebaseConfigured(),
     pendingCount: pending.length,
     failedCount: failed.length,
+    deadLetterCount: deadLetter.length,
     lastSync: lastSuccess?.synced_at ?? null,
     startupPull: getStartupPullState(),
     recentLogs: recentLogs.map((l) => ({

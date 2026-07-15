@@ -12,6 +12,7 @@ export function useSyncStatus() {
     setConnectionStatus,
     setPendingCount,
     setFailedCount,
+    setDeadLetterCount,
     setLastSync,
     setFirebaseConfigured,
     setStartupPullInProgress,
@@ -30,6 +31,7 @@ export function useSyncStatus() {
         setConnectionStatus(res.online ? "online" : "offline")
         setPendingCount(res.pendingCount ?? 0)
         setFailedCount(res.failedCount ?? 0)
+        setDeadLetterCount(res.deadLetterCount ?? 0)
         setLastSync(res.lastSync ?? null)
         setFirebaseConfigured(!!res.firebaseConfigured)
         if (res.startupPull) {
@@ -66,6 +68,7 @@ export function useSyncStatus() {
     setConnectionStatus,
     setPendingCount,
     setFailedCount,
+    setDeadLetterCount,
     setLastSync,
     setFirebaseConfigured,
     setStartupPullInProgress,

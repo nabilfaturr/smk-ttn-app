@@ -9,11 +9,14 @@ export function SyncStatusPage() {
   const {
     connectionStatus,
     pendingCount,
+    failedCount,
+    deadLetterCount,
     lastSync,
     setConnectionStatus,
     setPendingCount,
     setLastSync,
     setFailedCount,
+    setDeadLetterCount,
     setFirebaseConfigured,
     listenerStarted,
     recentChanges,
@@ -27,6 +30,7 @@ export function SyncStatusPage() {
     setConnectionStatus(res.online ? "online" : "offline")
     setPendingCount(res.pendingCount ?? 0)
     setFailedCount(res.failedCount ?? 0)
+    setDeadLetterCount(res.deadLetterCount ?? 0)
     setFirebaseConfigured(!!res.firebaseConfigured)
     setLastSync(res.lastSync ?? null)
     setLogs(res.recentLogs ?? [])
@@ -84,7 +88,7 @@ export function SyncStatusPage() {
     <div className="space-y-6">
       <h2 className="text-2xl font-semibold">Sinkronisasi</h2>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader><CardTitle className="text-sm text-muted-foreground">Koneksi Internet</CardTitle></CardHeader>
           <CardContent>
@@ -95,7 +99,7 @@ export function SyncStatusPage() {
         </Card>
 
         <Card>
-          <CardHeader><CardTitle className="text-sm text-muted-foreground">Antrean Sinkronisasi</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-sm text-muted-foreground">Antrean</CardTitle></CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">{pendingCount}</p>
             <p className="text-xs text-muted-foreground">data menunggu</p>
@@ -103,9 +107,18 @@ export function SyncStatusPage() {
         </Card>
 
         <Card>
-          <CardHeader><CardTitle className="text-sm text-muted-foreground">Terakhir Sinkron</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-sm text-muted-foreground">Retry</CardTitle></CardHeader>
           <CardContent>
-            <p className="text-sm">{lastSync ? new Date(lastSync).toLocaleString("id-ID") : "Belum pernah"}</p>
+            <p className={`text-2xl font-bold ${failedCount > 0 ? "text-amber-600" : ""}`}>{failedCount}</p>
+            <p className="text-xs text-muted-foreground">gagal · auto-retry</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle className="text-sm text-muted-foreground">Dead Letter</CardTitle></CardHeader>
+          <CardContent>
+            <p className={`text-2xl font-bold ${deadLetterCount > 0 ? "text-red-600" : ""}`}>{deadLetterCount}</p>
+            <p className="text-xs text-muted-foreground">gagal permanen</p>
           </CardContent>
         </Card>
       </div>

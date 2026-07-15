@@ -25,6 +25,7 @@
 14. [Push ke GitHub](#14-push-ke-github)
 15. [Distribusi ke Sekolah](#15-distribusi-ke-sekolah)
 16. [FAQ](#16-faq)
+17. [Demo Video (Shoot & Showcase)](#17-demo-video-shoot--showcase)
 
 ---
 
@@ -846,6 +847,97 @@ Tiap sekolah install independent. DB lokal di `%APPDATA%\smk-ttn-app\`. Untuk sy
 
 ### Q: Ada cara auto-update dari dalam app?
 **A:** Belum. Update manual untuk sekarang. Roadmap: implement `electron-updater` di versi berikutnya.
+
+---
+
+## 17. Demo Video (Shoot & Showcase)
+
+> Buat video demo / tutorial untuk presentasi, YouTube, atau handover ke sekolah. Target durasi: **5–7 menit**.
+
+### 17.1 Setup Awal (sekali, di Windows)
+
+**1. Clone & install dependencies** (lihat juga [Section 4](#4-clone-repository) & [Section 5](#5-install-dependencies)):
+```powershell
+git clone https://github.com/nabilfaturr/smk-ttn-app.git
+cd smk-ttn-app
+copy .env.example .env
+npm install
+npx electron-rebuild -f -w better-sqlite3
+```
+
+> **Catatan**: `electron-rebuild` hanya wajib kalau nanti mau `npm run dev` (Electron) atau `npm run build`. Untuk seeder saja, tidak perlu rebuild karena seeder jalan di Node.js (bukan Electron).
+
+**2. Seed data dummy** sebelum shoot (lihat juga [Section 11](#11-database-management)):
+```powershell
+npm run db:fresh:full
+```
+
+Tunggu ~30 detik. Database akan terisi:
+- 1 admin (`admin` / `admin123`)
+- 9 guru (`guru1` – `guru9` / `guru123`)
+- 9 kelas (X RPL, XI RPL, XII RPL, X TKJ, XI TKJ, XII TKJ, dst)
+- 34 mata pelajaran
+- 270 siswa + ~9.700 record nilai/absensi/kokurikuler
+- 1 tahun ajaran aktif: 2025/2026
+
+**Override DB path** (kalau mau seed ke production DB):
+```powershell
+$env:SMK_TTN_DB_PATH = "$env:APPDATA\smk-ttn-app\smk-ttn.db"
+npm run db:fresh:full
+```
+
+### 17.2 Jalankan Aplikasi
+
+**Mode development (recommended untuk demo, hot reload aktif):**
+```powershell
+npm run dev
+```
+
+**Mode production (pakai .exe yang sudah di-build):**
+```powershell
+# Lihat Section 6 untuk build installer
+# Setelah build, jalankan:
+.\dist\Sistem Absensi dan Penilaian SMK TTN-1.0.0-Setup.exe
+```
+
+Login dengan **`admin` / `admin123`**.
+
+### 17.3 Alur Demo yang Disarankan (5–7 menit)
+
+| # | Scene | Aksi | Highlight |
+|---|-------|------|-----------|
+| 1 | **Opening** | Splash screen → Login sebagai admin | Branding, login screen |
+| 2 | **Dashboard** | Lihat ringkasan data: 9 kelas, 270 siswa, dll | Data-rich, langsung impressive |
+| 3 | **Master Data → Siswa** | Browse tabel 270 siswa, filter per kelas, search by nama | Performance + filter UX |
+| 4 | **Master Data → Mata Pelajaran** | Lihat 34 mapel yang sudah di-seed | Master data lengkap |
+| 5 | **Absensi** | Input absensi hari ini untuk 1 kelas (hadir/sakit/izin/alpa) | Autocomplete, bulk save |
+| 6 | **Nilai** | Input nilai formatif/sumatif, lihat total & predikat otomatis | Tabel nilai, kalkulasi otomatis |
+| 7 | **Generate Rapor** | Pilih kelas → klik "Cek Kelengkapan" → hover badge "X kurang" untuk lihat tooltip | **Tooltip field kosong** (fitur baru) |
+| 8 | **Generate PDF/DOCX** | Klik "Generate" → tunggu selesai → buka folder | File output rapor |
+| 9 | **Buka Rapor** | Buka 1 file rapor hasil generate, scroll halaman | Visual quality, layout |
+| 10 | **Settings → Sync** (opsional) | Setup Firebase atau tunjukin status sync real-time | Multi-device sync |
+| 11 | **Closing** | Logout / close app | Wrap up |
+
+### 17.4 Tips Shooting
+
+- **Resolusi**: record di 1920×1080 (atau 1440×900 kalau laptop standar). Window app default 1280×800 — resize dulu sebelum record.
+- **Cursor**: perbesar cursor (Windows: Settings → Accessibility → Mouse → Size). Recorder (OBS / Bandicam) tetap bisa hide cursor di post-process.
+- **Sound**: pakai mic clip-on atau headset, bukan laptop mic. Record di ruang sepi.
+- **Tooling**: OBS Studio (free) atau Bandicam. Encode H.264, bitrate 8–12 Mbps untuk 1080p.
+- **Demo data sudah otomatis "cantik"** — `full-seed` generate nama realistis, nilai terdistribusi normal, absensi 90% hadir.
+- **Kalau mau demo tooltip "data kurang"**: siswa di `full-seed` semua status `lengkap`. Untuk demo skenario missing, hapus 1 record nilai/absensi manual via sqlite3, atau pakai `db:fresh:default` (lebih sedikit data, beberapa field sengaja kosong).
+- **Database path saat demo**: default di dev = `<project>/smk-ttn.db`. Kalau restart app & mau data tetap ada, jangan hapus folder project.
+
+### 17.5 Path Penting saat Demo
+
+| Lokasi | Path (Windows) |
+|---|---|
+| Database dev | `<project>\smk-ttn.db` |
+| Database production | `%APPDATA%\smk-ttn-app\smk-ttn.db` |
+| Folder rapor (output) | `%APPDATA%\smk-ttn-app\rapor\` |
+| Template rapor | `<project>\build\rapor-template.docx` |
+| File .env | `<project>\.env` |
+| Log error | Lihat DevTools (Ctrl+Shift+I) atau terminal `npm run dev` |
 
 ---
 

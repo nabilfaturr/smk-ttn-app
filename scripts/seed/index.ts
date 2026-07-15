@@ -11,11 +11,12 @@
 import { openDatabase, closeSqlite, getDbPath } from "./connection"
 import { runDefaultSeed } from "./data/default-seed"
 import { runFullSeed } from "./data/full-seed"
+import { runTestSeed } from "./data/test-seed"
 import { resetDatabase, backupDb } from "./reset"
 import { log } from "./helpers"
 import readline from "node:readline"
 
-type Mode = "default" | "full" | undefined
+type Mode = "default" | "full" | "test" | undefined
 
 function parseArgs(argv: string[]): { mode: Mode; reset: boolean; force: boolean } {
   let mode: Mode
@@ -24,6 +25,7 @@ function parseArgs(argv: string[]): { mode: Mode; reset: boolean; force: boolean
   for (const arg of argv) {
     if (arg === "--mode=default" || arg === "--default") mode = "default"
     else if (arg === "--mode=full" || arg === "--full") mode = "full"
+    else if (arg === "--mode=test" || arg === "--test") mode = "test"
     else if (arg === "--reset") reset = true
     else if (arg === "--force" || arg === "-f") force = true
     else if (arg === "--help" || arg === "-h") {
@@ -49,6 +51,8 @@ Usage:
 Options:
   --mode=default    Seed minimal data (admin, 1 TA, master)
   --mode=full       Seed realistic data (270 siswa, transaksi lengkap)
+  --mode=test       Seed minimal + 1 guru + 1 mapel + 1 kelas + 3 siswa
+                    (untuk functional E2E test, deterministic)
   --reset           Clear all 22 tables (rollback)
   --force, -f       Skip confirmation prompt
   --help, -h        Show this help
@@ -56,6 +60,7 @@ Options:
 Examples:
   tsx scripts/seed/index.ts --mode=default
   tsx scripts/seed/index.ts --mode=full
+  tsx scripts/seed/index.ts --mode=test
   tsx scripts/seed/index.ts --reset
   tsx scripts/seed/index.ts --reset --mode=full --force
 
@@ -118,6 +123,9 @@ async function main() {
     } else if (mode === "full") {
       log("Running full seed...")
       runFullSeed(db)
+    } else if (mode === "test") {
+      log("Running test seed...")
+      runTestSeed(db)
     }
     closeSqlite(sqlite)
     log(`\nSelesai! Tutup DB dan keluar.\n`)

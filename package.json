@@ -26,9 +26,11 @@
     "db:studio": "drizzle-kit studio",
     "db:seed": "tsx scripts/seed/index.ts --mode=default",
     "db:seed:full": "tsx scripts/seed/index.ts --mode=full",
+    "db:seed:test": "tsx scripts/seed/index.ts --mode=test",
     "db:seed:reset": "tsx scripts/seed/index.ts --reset",
     "db:fresh:full": "tsx scripts/seed/index.ts --reset --mode=full --force",
     "db:fresh:default": "tsx scripts/seed/index.ts --reset --mode=default --force",
+    "db:fresh:test": "tsx scripts/seed/index.ts --reset --mode=test --force",
     "sync:cleanup": "tsx scripts/sync-cleanup.ts",
     "sync:initial-push": "tsx scripts/sync-initial-push.ts",
     "build:embedded-migrations": "node scripts/build-embedded-migrations.mjs"

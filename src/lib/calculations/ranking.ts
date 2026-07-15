@@ -3,14 +3,14 @@ import { siswa, nilai, mataPelajaran } from "../db/schema"
 import { eq, and } from "drizzle-orm"
 
 export type RankingEntry = {
-  siswa_id: number
+  siswa_id: string
   nama: string
   jumlah: number
   rank: number
 }
 
 export type RawScore = {
-  siswa_id: number
+  siswa_id: string
   nama: string
   jumlah: number
 }
@@ -45,7 +45,7 @@ export function assignRanks(scores: RawScore[]): RankingEntry[] {
  * Memakai DB untuk query data nilai, lalu delegate ke assignRanks() untuk
  * logika ranking murni.
  */
-export function calculateRanking(kelasId: number, tahunAjaranId: number): RankingEntry[] {
+export function calculateRanking(kelasId: string, tahunAjaranId: string): RankingEntry[] {
   const db = getDb()
   const siswaList = db
     .select()

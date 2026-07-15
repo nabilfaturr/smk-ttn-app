@@ -10,8 +10,8 @@ ipcMain.handle("academicYear:create", async (_event, data) => {
     if (data.is_active) {
       db.update(tahunAjaran).set({ is_active: 0 }).run()
     }
-    const result = db.insert(tahunAjaran).values(data).run()
-    const id = Number(result.lastInsertRowid)
+    const result = db.insert(tahunAjaran).values(data).returning().get()
+    const id = result.id
     addToSyncLog("tahun_ajaran", id, "insert")
     return { success: true, id }
   } catch (error: any) {
@@ -23,7 +23,7 @@ ipcMain.handle("academicYear:update", async (_event, { id, data }) => {
   try {
     const db = getDb()
     if (data.is_active) {
-      db.update(tahunAjaran).set({ is_active: 0 }).run()
+      db.update(tahunAjaran).set({ is_active: 0 }).returning().get()
     }
     db.update(tahunAjaran).set(data).where(eq(tahunAjaran.id, id)).run()
     addToSyncLog("tahun_ajaran", id, "update")

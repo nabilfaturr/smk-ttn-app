@@ -45,8 +45,8 @@ function syncWaliKelasRole(
 ipcMain.handle("class:create", async (_event, data) => {
   try {
     const db = getDb()
-    const result = db.insert(kelas).values(data).run()
-    const id = Number(result.lastInsertRowid)
+    const result = db.insert(kelas).values(data).returning().get()
+    const id = result.id
     addToSyncLog("kelas", id, "insert")
     if (data.wali_kelas_id) {
       syncWaliKelasRole(db, data.wali_kelas_id)

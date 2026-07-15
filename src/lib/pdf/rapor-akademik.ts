@@ -112,9 +112,9 @@ const MUATAN_LOKAL_KODES = ["BJ"]
 /* ------------------------------------------------------------------ */
 
 export function generateRaporAkademik(
-  siswaId: number,
-  kelasId: number,
-  tahunAjaranId: number,
+  siswaId: string,
+  kelasId: string,
+  tahunAjaranId: string,
 ): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     try {

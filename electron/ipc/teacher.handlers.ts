@@ -16,18 +16,20 @@ ipcMain.handle("teacher:create", async (_event, data) => {
     const username = data.nip && data.nip.trim() !== ""
       ? data.nip
       : `guru_${crypto.randomInt(100000, 999999)}`
-    const userResult = db
+    const insertedUser = db
       .insert(users)
       .values({ username, password: hashed, role: "guru" })
-      .run()
-    const userId = Number(userResult.lastInsertRowid)
+      .returning()
+      .get()
+    const userId = insertedUser.id
     const kode_login = getOrCreateKodeLogin(db, userId)
     addToSyncLog("users", userId, "insert")
-    const result = db
+    const insertedGuru = db
       .insert(guru)
       .values({ user_id: userId, nip: data.nip || null, nama: data.nama, bidang_studi: data.bidang_studi })
-      .run()
-    const guruId = Number(result.lastInsertRowid)
+      .returning()
+      .get()
+    const guruId = insertedGuru.id
     addToSyncLog("guru", guruId, "insert")
     return { success: true, id: guruId, user_id: userId, kode_login, password }
   } catch (error: any) {
@@ -38,7 +40,7 @@ ipcMain.handle("teacher:create", async (_event, data) => {
 ipcMain.handle("teacher:update", async (_event, { id, data }) => {
   try {
     const db = getDb()
-    db.update(guru).set(data).where(eq(guru.id, id)).run()
+    db.update(guru).set(data).where(eq(guru.id, id)).returning().get()
     addToSyncLog("guru", id, "update")
     return { success: true }
   } catch (error: any) {

@@ -252,9 +252,9 @@ export type SyncStatus = {
   failedCount: number
   lastSync: string | null
   recentLogs: Array<{
-    id: number
+    id: string
     tabel: string
-    record_id: number
+    record_id: string
     action: string
     status: string
     synced_at: string

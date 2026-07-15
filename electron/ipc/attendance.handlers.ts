@@ -52,9 +52,9 @@ ipcMain.handle("attendance:save", async (_event, dataArray) => {
             status: data.status,
             jam_pelajaran: data.jamPelajaran,
           })
-          .run()
-        const id = Number(result.lastInsertRowid)
-        addToSyncLog("absensi", id, "insert")
+          .returning()
+          .get()
+        addToSyncLog("absensi", result.id, "insert")
       }
     }
     return { success: true }

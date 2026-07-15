@@ -9,7 +9,7 @@ import {
 import { eq, and } from "drizzle-orm"
 import { createPdfDocument, addKop, addSectionTitle, addTable, addText } from "./pdf-utils"
 
-export function generateRaporPrakerin(siswaId: number, tahunAjaranId: number): Promise<Buffer> {
+export function generateRaporPrakerin(siswaId: string, tahunAjaranId: string): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     try {
       const db = getDb()

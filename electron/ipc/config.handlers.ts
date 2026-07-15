@@ -21,8 +21,8 @@ ipcMain.handle("config:updateInfo", async (_event, data) => {
       db.update(infoSekolah).set(data).where(eq(infoSekolah.id, existing.id)).run()
       addToSyncLog("info_sekolah", existing.id, "update")
     } else {
-      const result = db.insert(infoSekolah).values(data).run()
-      const id = Number(result.lastInsertRowid)
+      const result = db.insert(infoSekolah).values(data).returning().get()
+      const id = result.id
       addToSyncLog("info_sekolah", id, "insert")
     }
     return { success: true }

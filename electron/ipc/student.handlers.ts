@@ -34,9 +34,8 @@ function autoEnrollWajibEkskul(db: ReturnType<typeof getDb>, siswaId: number): v
         tahun_ajaran_id: taAktif.id,
         predikat: "A",
         keterangan: null,
-      })
-      .run()
-    addToSyncLog("nilai_ekskul", Number(result.lastInsertRowid), "insert")
+      }).returning().get()
+    addToSyncLog("nilai_ekskul", result.id, "insert")
   }
 }
 
@@ -74,8 +73,8 @@ ipcMain.handle("student:checkNis", async (_event, params: { nis: string; exclude
 ipcMain.handle("student:create", async (_event, data) => {
   try {
     const db = getDb()
-    const result = db.insert(siswa).values(data).run()
-    const id = Number(result.lastInsertRowid)
+    const result = db.insert(siswa).values(data).returning().get()
+    const id = result.id
     addToSyncLog("siswa", id, "insert")
     // Auto-enroll ekskul wajib (Ketarunaan) untuk siswa baru yang aktif
     if (data.status === "aktif" || data.status === undefined) {

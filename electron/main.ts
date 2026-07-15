@@ -47,6 +47,7 @@ function createWindow() {
 }
 
 import { initDatabase } from "../src/lib/db"
+import { loadOrCreateDeviceId } from "../src/lib/db/ids"
 import { startSyncEngine } from "../src/lib/sync/sync-engine"
 import "./ipc/auth.handlers"
 import "./ipc/arsip.handlers"
@@ -66,6 +67,8 @@ import "./ipc/shell.handlers"
 import "./ipc/firebase-config.handlers"
 
 app.whenReady().then(() => {
+  const deviceId = loadOrCreateDeviceId()
+  console.log(`[main] device-id: ${deviceId}`)
   initDatabase()
   // Start background sync engine (interval 30 detik)
   startSyncEngine()

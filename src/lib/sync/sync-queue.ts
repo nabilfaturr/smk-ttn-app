@@ -3,7 +3,7 @@ import { syncLog } from "../db/schema"
 
 export function addToSyncLog(
   tabel: string,
-  recordId: number,
+  recordId: string,
   action: "insert" | "update" | "delete",
 ) {
   try {

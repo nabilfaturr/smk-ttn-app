@@ -110,9 +110,8 @@ ipcMain.handle("ekskul-siswa:enroll", async (_event, { siswaId, ekskulId, tahunA
         tahun_ajaran_id: tahunAjaranId,
         predikat: "A",
         keterangan: null,
-      })
-      .run()
-    const id = Number(result.lastInsertRowid)
+      }).returning().get()
+    const id = result.id
     addToSyncLog("nilai_ekskul", id, "insert")
     return { success: true, id }
   } catch (error: any) {
@@ -202,9 +201,8 @@ ipcMain.handle("ekskul-siswa:enrollBulk", async (_event, { siswaIds, ekskulId, t
           tahun_ajaran_id: tahunAjaranId,
           predikat: "A",
           keterangan: null,
-        })
-        .run()
-      addToSyncLog("nilai_ekskul", Number(result.lastInsertRowid), "insert")
+        }).returning().get()
+      addToSyncLog("nilai_ekskul", result.id, "insert")
       enrolled++
     }
     return { success: true, enrolled, skipped }

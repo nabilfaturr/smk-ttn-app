@@ -24,8 +24,8 @@ import { addToSyncLog } from "../../src/lib/sync/sync-queue"
 ipcMain.handle("tp:create", async (_event, data) => {
   try {
     const db = getDb()
-    const result = db.insert(tujuanPembelajaran).values(data).run()
-    const id = Number(result.lastInsertRowid)
+    const result = db.insert(tujuanPembelajaran).values(data).returning().get()
+    const id = result.id
     addToSyncLog("tujuan_pembelajaran", id, "insert")
     return { success: true, id }
   } catch (error: any) {
@@ -161,21 +161,20 @@ ipcMain.handle("grade:save", async (_event, data) => {
       if (tpCapaian) {
         db.delete(nilaiTp).where(eq(nilaiTp.nilai_id, existing.id)).run()
         for (const tc of tpCapaian) {
-          const tpResult = db.insert(nilaiTp).values({ nilai_id: existing.id, tp_id: tc.tp_id, capaian: tc.capaian }).run()
-          addToSyncLog("nilai_tp", Number(tpResult.lastInsertRowid), "insert")
+          const tpResult = db.insert(nilaiTp).values({ nilai_id: existing.id, tp_id: tc.tp_id, capaian: tc.capaian }).returning().get()
+          addToSyncLog("nilai_tp", tpResult.id, "insert")
         }
       }
     } else {
       const result = db
         .insert(nilai)
-        .values({ siswa_id: siswaId, mapel_id: mapelId, tahun_ajaran_id: tahunAjaranId, nilai_formatif: nilaiFormatif, nilai_sumatif: nilaiSumatif, nilai_rapor: nilaiRapor, deskripsi })
-        .run()
-      const newId = Number(result.lastInsertRowid)
+        .values({ siswa_id: siswaId, mapel_id: mapelId, tahun_ajaran_id: tahunAjaranId, nilai_formatif: nilaiFormatif, nilai_sumatif: nilaiSumatif, nilai_rapor: nilaiRapor, deskripsi }).returning().get()
+      const newId = result.id
       addToSyncLog("nilai", newId, "insert")
       if (tpCapaian) {
         for (const tc of tpCapaian) {
-          const tpResult = db.insert(nilaiTp).values({ nilai_id: newId, tp_id: tc.tp_id, capaian: tc.capaian }).run()
-          addToSyncLog("nilai_tp", Number(tpResult.lastInsertRowid), "insert")
+          const tpResult = db.insert(nilaiTp).values({ nilai_id: newId, tp_id: tc.tp_id, capaian: tc.capaian }).returning().get()
+          addToSyncLog("nilai_tp", tpResult.id, "insert")
         }
       }
     }
@@ -208,8 +207,8 @@ ipcMain.handle("grade:savePrakerin", async (_event, data) => {
       db.update(nilaiPrakerin).set({ ...rest, tpl, sl, sk, nilai_rapor: nilaiRapor }).where(eq(nilaiPrakerin.id, existing.id)).run()
       addToSyncLog("nilai_prakerin", existing.id, "update")
     } else {
-      const result = db.insert(nilaiPrakerin).values({ siswa_id: siswaId, tahun_ajaran_id: tahunAjaranId, ...rest, tpl, sl, sk, nilai_rapor: nilaiRapor }).run()
-      addToSyncLog("nilai_prakerin", Number(result.lastInsertRowid), "insert")
+      const result = db.insert(nilaiPrakerin).values({ siswa_id: siswaId, tahun_ajaran_id: tahunAjaranId, ...rest, tpl, sl, sk, nilai_rapor: nilaiRapor }).returning().get()
+      addToSyncLog("nilai_prakerin", result.id, "insert")
     }
 
     const absExisting = db.select().from(absensiPrakerin).where(and(eq(absensiPrakerin.siswa_id, siswaId), eq(absensiPrakerin.tahun_ajaran_id, tahunAjaranId))).get()
@@ -217,8 +216,8 @@ ipcMain.handle("grade:savePrakerin", async (_event, data) => {
       db.update(absensiPrakerin).set(abs).where(eq(absensiPrakerin.id, absExisting.id)).run()
       addToSyncLog("absensi_prakerin", absExisting.id, "update")
     } else {
-      const result = db.insert(absensiPrakerin).values({ siswa_id: siswaId, tahun_ajaran_id: tahunAjaranId, ...abs }).run()
-      addToSyncLog("absensi_prakerin", Number(result.lastInsertRowid), "insert")
+      const result = db.insert(absensiPrakerin).values({ siswa_id: siswaId, tahun_ajaran_id: tahunAjaranId, ...abs }).returning().get()
+      addToSyncLog("absensi_prakerin", result.id, "insert")
     }
     return { success: true }
   } catch (error: any) {
@@ -340,8 +339,8 @@ ipcMain.handle("grade:saveKokurikuler", async (_event, data) => {
           addToSyncLog("nilai_kokurikuler", existing.id, "delete")
         }
       } else if (g.grade) {
-        const result = db.insert(nilaiKokurikuler).values({ siswa_id: siswaId, subdimensi_id: g.subdimensiId, tahun_ajaran_id: tahunAjaranId, grade: g.grade }).run()
-        addToSyncLog("nilai_kokurikuler", Number(result.lastInsertRowid), "insert")
+        const result = db.insert(nilaiKokurikuler).values({ siswa_id: siswaId, subdimensi_id: g.subdimensiId, tahun_ajaran_id: tahunAjaranId, grade: g.grade }).returning().get()
+        addToSyncLog("nilai_kokurikuler", result.id, "insert")
       }
     }
     return { success: true }
@@ -382,8 +381,8 @@ ipcMain.handle("kokurikuler:toggleSubdimensiTingkat", async (_event, { subdimens
       const existing = db.select().from(subdimensiP5Tingkat)
         .where(and(eq(subdimensiP5Tingkat.subdimensi_id, subdimensiId), eq(subdimensiP5Tingkat.tingkat, tingkat))).get()
       if (!existing) {
-        const result = db.insert(subdimensiP5Tingkat).values({ subdimensi_id: subdimensiId, tingkat }).run()
-        addToSyncLog("subdimensi_p5_tingkat", Number(result.lastInsertRowid), "insert")
+        const result = db.insert(subdimensiP5Tingkat).values({ subdimensi_id: subdimensiId, tingkat }).returning().get()
+        addToSyncLog("subdimensi_p5_tingkat", result.id, "insert")
       }
     } else {
       const existing = db.select().from(subdimensiP5Tingkat)
@@ -409,8 +408,8 @@ ipcMain.handle("teacherNote:save", async (_event, data) => {
       db.update(catatanWaliKelas).set({ catatan }).where(eq(catatanWaliKelas.id, existing.id)).run()
       addToSyncLog("catatan_wali_kelas", existing.id, "update")
     } else {
-      const result = db.insert(catatanWaliKelas).values({ siswa_id: siswaId, tahun_ajaran_id: tahunAjaranId, catatan }).run()
-      addToSyncLog("catatan_wali_kelas", Number(result.lastInsertRowid), "insert")
+      const result = db.insert(catatanWaliKelas).values({ siswa_id: siswaId, tahun_ajaran_id: tahunAjaranId, catatan }).returning().get()
+      addToSyncLog("catatan_wali_kelas", result.id, "insert")
     }
     return { success: true }
   } catch (error: any) {

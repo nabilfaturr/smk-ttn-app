@@ -7,8 +7,8 @@ import { addToSyncLog } from "../../src/lib/sync/sync-queue"
 ipcMain.handle("subject:create", async (_event, data) => {
   try {
     const db = getDb()
-    const result = db.insert(mataPelajaran).values(data).run()
-    const id = Number(result.lastInsertRowid)
+    const result = db.insert(mataPelajaran).values(data).returning().get()
+    const id = result.id
     addToSyncLog("mata_pelajaran", id, "insert")
     return { success: true, id }
   } catch (error: any) {

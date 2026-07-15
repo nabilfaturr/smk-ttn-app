@@ -173,9 +173,8 @@ ipcMain.handle(
           kelas_id: kelasId,
           guru_id: guruId,
           tahun_ajaran_id: tahunAjaranId,
-        })
-        .run()
-      const id = Number(result.lastInsertRowid)
+        }).returning().get()
+      const id = result.id
       addToSyncLog("mapel_kelas_guru", id, "insert")
       return { success: true, id }
     } catch (error: any) {
@@ -244,11 +243,10 @@ ipcMain.handle(
               kelas_id: a.kelas_id,
               guru_id: a.guru_id,
               tahun_ajaran_id: tahunAjaranId,
-            })
-            .run()
+            }).returning().get()
           addToSyncLog(
             "mapel_kelas_guru",
-            Number(result.lastInsertRowid),
+            result.id,
             "insert",
           )
           inserted++

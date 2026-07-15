@@ -53,8 +53,6 @@ export function resetDatabase(sqlite: Sqlite): void {
   const tx = sqlite.transaction(() => {
     for (const table of ALL_TABLES) {
       sqlite.exec(`DELETE FROM "${table}"`)
-      // Reset autoincrement juga supaya ID mulai dari 1 lagi
-      sqlite.exec(`DELETE FROM sqlite_sequence WHERE name = '${table}'`)
     }
   })
   tx()

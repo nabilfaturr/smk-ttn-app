@@ -53,7 +53,7 @@ db.insert(schema.infoSekolah).values({
   // Subdimensi P5 (default sederhana) + assign ke semua tingkat
   const subdimensiNames = ["Akhlak Beragama", "Kolaborasi", "Kreativitas", "Penalaran Kritis", "Kemandirian", "Komunikasi"]
   const dimensiIds = db.select().from(schema.dimensiP5).all().map((d) => d.id)
-  const subdimensiIds: number[] = []
+  const subdimensiIds: string[] = []
   for (let i = 0; i < subdimensiNames.length; i++) {
     const inserted = db.insert(schema.subdimensiP5).values({
       dimensi_id: dimensiIds[i % dimensiIds.length],

@@ -95,7 +95,7 @@ const MUATAN_LOKAL_KODES = ["BSA", "PU"]
 
 function generateCapaianKompetensi(
   db: ReturnType<typeof getDb>,
-  nilaiId: number,
+  nilaiId: string,
 ): string {
   const tpRows = db
     .select()
@@ -129,9 +129,9 @@ function generateCapaianKompetensi(
 /* ------------------------------------------------------------------ */
 
 export function generateRaporDocx(
-  siswaId: number,
-  kelasId: number,
-  tahunAjaranId: number,
+  siswaId: string,
+  kelasId: string,
+  tahunAjaranId: string,
 ): Buffer {
   const db = getDb()
 

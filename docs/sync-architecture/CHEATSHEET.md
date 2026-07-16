@@ -192,4 +192,9 @@ sqlite3 ~/.config/smk-ttn-app/smk-ttn.db \
 
 ---
 
-Lihat juga: `README.md` (diagram lengkap) | `architecture.html` (interaktif)
+Lihat juga:
+- `README.md` (Mermaid diagrams)
+- `architecture.html` (interactive)
+- `architecture.png` (high-DPI render)
+- `sync-log-explained.md` (deep-dive sync_log)
+- **`flow-illustration.md`** ← ASCII art, gak perlu render, copy-paste ready

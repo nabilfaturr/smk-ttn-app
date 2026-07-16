@@ -82,5 +82,7 @@ db.insert(schema.infoSekolah).values({
     nama: "2026/2027",
     semester: 1,
     is_active: 1,
+    tanggal_mulai: "2026-07-01",
+    tanggal_selesai: "2026-12-31",
   }).run()
 }

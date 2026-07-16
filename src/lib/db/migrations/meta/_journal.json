@@ -15,6 +15,13 @@
       "when": 1784087459228,
       "tag": "0001_smk_ttn_schema_sync",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1784164732366,
+      "tag": "0002_real_wolverine",
+      "breakpoints": true
     }
   ]
 }

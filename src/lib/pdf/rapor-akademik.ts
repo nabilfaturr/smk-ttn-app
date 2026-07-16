@@ -277,12 +277,8 @@ export function generateRaporAkademik(
       /* =============================================================== */
       /*  Section 5: Ketidakhadiran                                         */
       /* =============================================================== */
-      const tahunParts = tahun.nama.split("/").map((s) => parseInt(s.trim(), 10))
-      const firstYear = tahunParts[0] ?? new Date().getFullYear()
-      const secondYear = tahunParts[1] ?? firstYear + 1
-      const isGanjil = tahun.semester === 1
-      const startDate = isGanjil ? `${firstYear}-07-01` : `${secondYear}-01-01`
-      const endDate = isGanjil ? `${firstYear}-12-31` : `${secondYear}-06-30`
+      const startDate = tahun.tanggal_mulai
+      const endDate = tahun.tanggal_selesai
       const jamPerHariRow = db.select().from(configTable).where(eq(configTable.kunci, "JAM_PER_HARI")).get()
       const jamPerHari = jamPerHariRow ? parseInt(jamPerHariRow.nilai) : 6
 

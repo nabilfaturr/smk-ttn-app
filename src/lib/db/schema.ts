@@ -36,6 +36,8 @@ export const tahunAjaran = sqliteTable("tahun_ajaran", {
   nama: text("nama").notNull(),
   semester: integer("semester", { enum: [1, 2] }).notNull(),
   is_active: integer("is_active").notNull().default(1),
+  tanggal_mulai: text("tanggal_mulai").notNull(),
+  tanggal_selesai: text("tanggal_selesai").notNull(),
   updated_at: text("updated_at")
     .notNull()
     .$defaultFn(() => new Date().toISOString())

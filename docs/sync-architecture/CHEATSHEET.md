@@ -33,6 +33,8 @@ Pattern = outbox (sync_log table)
 
 ## 📋 Tabel sync_log (Outbox)
 
+> "Buku pesanan" yang mencatat setiap perubahan lokal. Outbox pattern = pisah "tulis data" dengan "kirim ke cloud" untuk reliability.
+
 | Field | Tipe | Keterangan |
 |---|---|---|
 | `id` | TEXT (UUID) | Primary key |
@@ -44,6 +46,12 @@ Pattern = outbox (sync_log table)
 | `next_retry_at` | TEXT | Kapan coba lagi (exponential) |
 | `synced_at` | TEXT | Timestamp sync |
 | `last_error` | TEXT | Pesan error terakhir |
+
+**Kenapa penting?** Detail lengkap di `sync-log-explained.md`. Singkatnya:
+- ✅ **Atomic**: insert data + catat antrian dalam 1 transaction
+- ✅ **Crash recovery**: app crash mid-write → sync_log persist → retry saat restart
+- ✅ **Idempotent**: UNIQUE constraint → no duplicate entries
+- ✅ **Retry reliable**: failed record otomatis retry dengan exponential backoff
 
 ---
 

@@ -188,6 +188,7 @@
             <a href="#tables">8. Tabel</a>
             <a href="#quota">9. Quota</a>
             <a href="#recovery">10. Recovery</a>
+            <a href="#sync-log">📋 sync_log</a>
         </div>
     </nav>
 
@@ -490,6 +491,36 @@ flowchart TD
     style J fill:#bbf7d0
             </div>
             <p><strong>Outbox pattern = no data loss</strong>. Kalau crash saat push, sync_log masih <code>pending</code> → di-retry saat restart.</p>
+        </section>
+
+        <section class="section">
+            <h2>📋 sync_log — Outbox Pattern (Buku Pesanan)</h2>
+            <p>Tabel "antrian" yang mencatat setiap perubahan lokal. Ada di <code>src/lib/db/schema.ts</code> (tabel ke-22).</p>
+            <div class="mermaid">
+flowchart LR
+    A["👤 User CRUD"] -->|1. Transaction| B["INSERT data<br/>+ addToSyncLog"]
+    B --> C["📋 sync_log<br/>(antrian)"]
+    C -->|2. 30s| D["⚙️ Sync Engine"]
+    D -->|3. push| E["🔥 Firestore"]
+    E -->|success| F["UPDATE status='success'"]
+    E -->|fail| G["UPDATE status='failed'<br/>next_retry_at=+30s"]
+
+    style B fill:#86efac
+    style C fill:#fbbf24
+    style F fill:#bbf7d0
+    style G fill:#fca5a5
+            </div>
+            <div class="info-box">
+                <strong>Kenapa sync_log penting?</strong>
+                <ul>
+                    <li><strong>Atomic</strong>: data + antrian dalam 1 transaction</li>
+                    <li><strong>Crash recovery</strong>: persist saat restart</li>
+                    <li><strong>Idempotent</strong>: no duplicate entries</li>
+                    <li><strong>Retry reliable</strong>: exponential backoff otomatis</li>
+                    <li><strong>Quota management</strong>: batch 20 per cycle</li>
+                </ul>
+            </div>
+            <p>Detail lengkap (anatomi, query, edge cases): <a href="sync-log-explained.md">sync-log-explained.md</a></p>
         </section>
 
         <section class="section">

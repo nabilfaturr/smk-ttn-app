@@ -157,6 +157,17 @@ export function GradeInputPage() {
   }
 
   async function handleSave() {
+    for (const r of rows) {
+      if (r.nilai_formatif != null && (r.nilai_formatif < 0 || r.nilai_formatif > 100)) {
+        toast.error(`Nilai formatif ${r.nama} harus antara 0 dan 100`)
+        return
+      }
+      if (r.nilai_sumatif != null && (r.nilai_sumatif < 0 || r.nilai_sumatif > 100)) {
+        toast.error(`Nilai sumatif ${r.nama} harus antara 0 dan 100`)
+        return
+      }
+    }
+
     setLoading(true)
     for (const r of rows) {
       await window.electronAPI.gradeSave({
@@ -249,6 +260,7 @@ export function GradeInputPage() {
                       type="number"
                       min="0"
                       max="100"
+                      data-invalid={r.nilai_formatif != null && (r.nilai_formatif < 0 || r.nilai_formatif > 100)}
                       className="w-20 h-8"
                       value={r.nilai_formatif ?? ""}
                       onChange={(e) => updateNilai(r.siswa_id, "nilai_formatif", e.target.value)}
@@ -259,6 +271,7 @@ export function GradeInputPage() {
                       type="number"
                       min="0"
                       max="100"
+                      data-invalid={r.nilai_sumatif != null && (r.nilai_sumatif < 0 || r.nilai_sumatif > 100)}
                       className="w-20 h-8"
                       value={r.nilai_sumatif ?? ""}
                       onChange={(e) => updateNilai(r.siswa_id, "nilai_sumatif", e.target.value)}

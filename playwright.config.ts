@@ -1,4 +1,5 @@
 import { defineConfig, devices } from "@playwright/test"
+import path from "path"
 
 /**
  * Playwright config untuk E2E testing aplikasi Electron SMK TTN.
@@ -14,12 +15,15 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   workers: 1,
   reporter: [["list"], ["html", { open: "never" }]],
-  timeout: 60_000,
-  expect: { timeout: 10_000 },
+  timeout: 180_000,
+  expect: { timeout: 15_000 },
   use: {
     trace: "on-first-retry",
     screenshot: "only-on-failure",
-    video: "retain-on-failure",
+    video: "on",
+    videoOptions: {
+      dir: path.join(__dirname, "test-results/videos-skripsi"),
+    },
   },
   projects: [
     {

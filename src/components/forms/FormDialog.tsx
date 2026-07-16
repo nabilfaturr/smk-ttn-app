@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { z } from "zod"
 import {
   Dialog,
@@ -78,9 +78,14 @@ export function FormDialog({
 }: FormDialogProps) {
   const [values, setValues] = useState<Record<string, any>>({})
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const wasOpen = useRef(false)
 
   useEffect(() => {
-    if (open) {
+    // Reset values HANYA saat transisi closed → open, bukan tiap render.
+    // Parent component sering membuat `fields` reference baru tiap render
+    // (mis. options di-derive dari state lain), yang sebelumnya bikin
+    // values ke-reset di tengah user ngetik.
+    if (open && !wasOpen.current) {
       const initial: Record<string, any> = {}
       for (const f of fields) {
         initial[f.name] = defaultValues?.[f.name] ?? ""
@@ -88,6 +93,7 @@ export function FormDialog({
       setValues(initial)
       setErrors({})
     }
+    wasOpen.current = open
   }, [open, fields, defaultValues])
 
   function update(name: string, value: any) {

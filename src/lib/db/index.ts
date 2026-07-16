@@ -29,8 +29,11 @@ function ensureDatabase(sqlite: Database.Database) {
 }
 
 export function initDatabase() {
-  const dbPath = path.join(app.getPath("userData"), "smk-ttn.db")
-  console.log(`[db] init: ${dbPath}`)
+  const overridePath = process.env.SMK_TTN_DB_PATH
+  const dbPath = overridePath
+    ? path.resolve(overridePath)
+    : path.join(app.getPath("userData"), "smk-ttn.db")
+  console.log(`[db] init: ${dbPath}${overridePath ? " (override)" : ""}`)
   const sqlite = new Database(dbPath)
   sqlite.pragma("journal_mode = WAL")
   sqlite.pragma("foreign_keys = ON")

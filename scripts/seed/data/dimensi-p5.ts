@@ -265,7 +265,46 @@ export function seedDimensiP5(db: Db): { idMap: Map<string, number>; subdimensiM
 
   // Re-fetch setelah cleanup
   const dimensiExisting = db.select().from(schema.dimensiP5).all()
-  const idMap = new Map<string, number>(dimensiExisting.map((d) => [d.nama, d.id]))
+  // Deduplicate: kalau ada >1 dimensi dengan nama sama, keep yang pertama,
+  // hapus sisanya (beserta subdimensi cascade).
+  const byNama = new Map<string, typeof dimensiExisting>()
+  for (const d of dimensiExisting) {
+    if (!byNama.has(d.nama)) byNama.set(d.nama, [])
+    byNama.get(d.nama)!.push(d)
+  }
+  let dedupDeleted = 0
+  for (const [nama, list] of byNama) {
+    if (list.length > 1) {
+      const [keep, ...dupes] = list
+      for (const d of dupes) {
+        const oldSubIds = db
+          .select({ id: schema.subdimensiP5.id })
+          .from(schema.subdimensiP5)
+          .where(eq(schema.subdimensiP5.dimensi_id, d.id))
+          .all()
+          .map((r) => r.id)
+        if (oldSubIds.length > 0) {
+          db.delete(schema.nilaiKokurikuler)
+            .where(inArray(schema.nilaiKokurikuler.subdimensi_id, oldSubIds))
+            .run()
+          db.delete(schema.subdimensiP5Tingkat)
+            .where(inArray(schema.subdimensiP5Tingkat.subdimensi_id, oldSubIds))
+            .run()
+          db.delete(schema.subdimensiP5).where(inArray(schema.subdimensiP5.id, oldSubIds)).run()
+        }
+        db.delete(schema.dimensiP5).where(eq(schema.dimensiP5.id, d.id)).run()
+        dedupDeleted++
+      }
+    }
+  }
+  if (dedupDeleted > 0) {
+    log(`  ✓ dimensi dedup (${dedupDeleted} duplikat dihapus)`)
+  } else {
+    log(`  [debug] dedup skipped, 0 deleted. dimensiExisting count = ${dimensiExisting.length}`)
+  }
+
+  const dimensiAfter = db.select().from(schema.dimensiP5).all()
+  const idMap = new Map<string, number>(dimensiAfter.map((d) => [d.nama, d.id]))
 
   // Insert/update dimensi
   for (const d of DEFAULT_DIMENSI) {

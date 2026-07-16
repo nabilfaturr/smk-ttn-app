@@ -159,6 +159,7 @@ export function backfillMapelKelasGuru(db: Db): void {
     if (!guruByBidang.has(key)) guruByBidang.set(key, [])
     guruByBidang.get(key)!.push(g.id)
   }
+  const allGuruIds = allGuru.map((g) => g.id)
   const rng = createRng(8888) // deterministic
 
   const mapelReguler = db
@@ -184,13 +185,16 @@ export function backfillMapelKelasGuru(db: Db): void {
   )
 
   // Map mapel_id → picked guru (deterministic per mapel)
+  // Fallback: kalau bidang_studi gak ada guru match, ambil guru random dari semua guru
   const mapelToGuru = new Map<number, number>()
   for (const m of mapelReguler) {
-    // Cari spec untuk ambil bidang_studi
     const spec = ALL_MAPEL.find((s) => s.kode_mapel === m.kode_mapel)
     if (!spec) continue
-    const guruIds = guruByBidang.get(spec.bidang_studi)
-    if (!guruIds || guruIds.length === 0) continue
+    let guruIds = guruByBidang.get(spec.bidang_studi)
+    if (!guruIds || guruIds.length === 0) {
+      guruIds = allGuruIds
+    }
+    if (guruIds.length === 0) continue
     mapelToGuru.set(m.id, pickOne(guruIds, rng))
   }
 

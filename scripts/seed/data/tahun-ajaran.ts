@@ -1,5 +1,11 @@
 /**
- * Seed: tahun_ajaran (3 rows: 2023/2024, 2024/2025, 2025/2026).
+ * Seed: tahun_ajaran (4 rows: 2024/2025, 2025/2026, 2026/2027).
+ *
+ * Update 2026-07: tambah TA 2026/2027 semester 1+2 dan set sebagai active,
+ * karena hari ini sudah masuk semester 1 TA baru (Juli 2026). Sebelumnya
+ * TA aktif 2025/2026 semester 1 (range 2025-07-01 s/d 2025-12-31) — tanggal
+ * hari ini (2026-07-16) di luar range, sehingga rapor tidak reflect absensi
+ * yang diinput di semester baru.
  */
 import type { Db } from "../connection"
 import * as schema from "../../../src/lib/db/schema"
@@ -11,12 +17,12 @@ const DEFAULT_TAHUN_AJARAN: Array<{
   semester: 1 | 2
   is_active: 1 | 0
 }> = [
-  { nama: "2023/2024", semester: 1, is_active: 0 },
-  { nama: "2023/2024", semester: 2, is_active: 0 },
   { nama: "2024/2025", semester: 1, is_active: 0 },
   { nama: "2024/2025", semester: 2, is_active: 0 },
-  { nama: "2025/2026", semester: 1, is_active: 1 },
+  { nama: "2025/2026", semester: 1, is_active: 0 },
   { nama: "2025/2026", semester: 2, is_active: 0 },
+  { nama: "2026/2027", semester: 1, is_active: 1 },
+  { nama: "2026/2027", semester: 2, is_active: 0 },
 ]
 
 export function seedTahunAjaran(db: Db): void {

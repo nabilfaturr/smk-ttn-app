@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
 import { dedupeTahunAjarans, type AcademicYear } from "@/lib/utils/tahun-ajaran"
+import { useSafeSelected } from "@/hooks/useSafeSelected"
 
 type TP = { id: number; mapel_id: number; kode_tp: string; deskripsi_tuntas: string; deskripsi_remediasi: string; tahun_ajaran_id: number }
 type Subject = { id: number; kode_mapel: string; nama_mapel: string }
@@ -78,6 +79,7 @@ export function LearningObjectivesPage() {
 
   useEffect(() => { loadSubjects() }, [loadSubjects])
   useEffect(() => { loadTp() }, [loadTp])
+  useSafeSelected(subjects, selectedMapel, setSelectedMapel)
 
   const columns: ColumnDef<TP>[] = [
     { key: "kode_tp", header: "Kode" },

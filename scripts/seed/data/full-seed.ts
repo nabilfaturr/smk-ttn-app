@@ -34,6 +34,7 @@ import { seedSiswaFull } from "./siswa"
 import { seedTujuanPembelajaran } from "./tujuan-pembelajaran"
 import { seedAbsensi } from "./absensi"
 import { seedNilai } from "./nilai"
+import { seedNilaiTp } from "./nilai-tp"
 import { seedNilaiEkskul, seedNilaiKokurikuler } from "./nilai-kokurikuler"
 import { seedNilaiPrakerin } from "./prakerin"
 import { seedCatatanWaliKelas } from "./catatan-wali-kelas"
@@ -41,7 +42,7 @@ import * as schema from "../../../src/lib/db/schema"
 import { eq } from "drizzle-orm"
 
 export function runFullSeed(db: Db) {
-  const STEPS = 16
+  const STEPS = 17
 
   logStep(1, STEPS, "Info Sekolah")
   seedInfoSekolah(db)
@@ -101,21 +102,25 @@ export function runFullSeed(db: Db) {
   logStep(12, STEPS, "Nilai")
   seedNilai(db, kelasIdByNama, mapelIdByKode, taId)
 
-  logStep(13, STEPS, "Nilai Ekskul (XII)")
+  logStep(13, STEPS, "Nilai TP (capaian TP per siswa-mapel XII)")
+  seedNilaiTp(db, kelasIdByNama, mapelIdByKode, taId)
+
+  logStep(14, STEPS, "Nilai Ekskul (XII)")
   seedNilaiEkskul(db, kelasIdByNama, ekskulIdMap, taId)
   autoEnrollWajibEkskul(db, taId)
 
-  logStep(14, STEPS, "Nilai Kokurikuler (P5)")
+  logStep(15, STEPS, "Nilai Kokurikuler (P5)")
   seedNilaiKokurikuler(db, kelasIdByNama, subdimensiAktifIds, taId)
 
-  logStep(15, STEPS, "Nilai Prakerin (XII TKJ)")
+  logStep(16, STEPS, "Nilai Prakerin (XII TKJ)")
   seedNilaiPrakerin(db, kelasIdByNama, taId)
 
-  logStep(16, STEPS, "Catatan Wali Kelas (XII)")
+  logStep(17, STEPS, "Catatan Wali Kelas (semua kelas)")
   seedCatatanWaliKelas(db, kelasIdByNama, taId)
 
   log(`\n✅ Full seed selesai!`)
   log(`   - 9 kelas, 270 siswa`)
   log(`   - 29 mata pelajaran`)
   log(`   - Data lengkap untuk XII (ranking, rapor, P5, prakerin)`)
+  log(`   - Catatan wali kelas untuk semua kelas`)
 }

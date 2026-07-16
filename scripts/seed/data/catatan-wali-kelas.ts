@@ -1,8 +1,9 @@
 /**
  * Seed: catatan_wali_kelas.
  *
- * Generate 1 catatan narasi per siswa XII (90 siswa).
+ * Generate 1 catatan narasi per siswa di SEMUA kelas (X, XI, XII).
  * Template narasi: kekuatan, pengembangan, saran.
+ * Coverage: 270 siswa (9 kelas × 30 siswa) = 270 records.
  */
 
 import type { Db } from "../connection"
@@ -47,7 +48,11 @@ const SARAN = [
   "Manfaatkan teknologi untuk belajar hal-hal baru yang positif.",
 ]
 
-const KELAS_XII = ["XII RPL", "XII TKJ A", "XII TKJ B"]
+const ALL_KELAS = [
+  "X RPL 1", "X RPL 2", "X TKJ 1",
+  "XI RPL", "XI TKJ A", "XI TKJ B",
+  "XII RPL", "XII TKJ A", "XII TKJ B",
+]
 
 export function seedCatatanWaliKelas(
   db: Db,
@@ -58,7 +63,7 @@ export function seedCatatanWaliKelas(
   let stepIdx = 0
   let totalInserted = 0
 
-  for (const kelasNama of KELAS_XII) {
+  for (const kelasNama of ALL_KELAS) {
     const kelasId = kelasIdByNama.get(kelasNama)
     if (!kelasId) continue
     const siswaList = db
@@ -96,7 +101,7 @@ export function seedCatatanWaliKelas(
       totalInserted++
     }
     stepIdx++
-    logProgress(stepIdx, KELAS_XII.length, `catatan ${kelasNama}`)
+    logProgress(stepIdx, ALL_KELAS.length, `catatan ${kelasNama}`)
   }
   log(`  ✓ catatan_wali_kelas (${totalInserted} new)`)
 }

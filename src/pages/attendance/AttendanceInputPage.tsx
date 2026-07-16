@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Search, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react"
+import { useSafeSelected } from "@/hooks/useSafeSelected"
 import {
   Select,
   SelectContent,
@@ -78,6 +79,7 @@ export function AttendanceInputPage() {
   }, [selectedKelas, tanggal, jam])
 
   useEffect(() => { loadKelas() }, [loadKelas])
+  useSafeSelected(kelasList, selectedKelas, setSelectedKelas)
   useEffect(() => { loadSiswa() }, [loadSiswa])
 
   const sortedFiltered = useMemo(() => {

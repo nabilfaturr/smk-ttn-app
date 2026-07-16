@@ -1,115 +1,116 @@
 /**
- * Seed: nilai_tp.
+ * Seed: nilai_tp (capaian TP per siswa-mapel).
  *
- * Untuk setiap record `nilai`, pilih 1-2 TP dari `tujuan_pembelajaran`
- * yang mapelnya cocok, lalu insert ke `nilai_tp` dengan capaian:
- *   - rapor >= 75 → "T" (tuntas → pakai deskripsi_tuntas)
- *   - rapor <  75 → "R" (remediasi → pakai deskripsi_remediasi)
+ * Untuk XII (90 siswa): TP records untuk 3 mapel utama (BIND, MTK, BING).
+ * - Tiap mapel: ~5-10 TP tergantung master
+ * - Distribusi capaian: 80% Tercapai, 20% Perlu Bimbingan
+ * Total: ~90 × 3 mapel × 5-10 TP = ~1.500-2.700 records
  *
- * Idempotent + capped: total nilai_tp per nilai MAX 2 kalimat
- * (capped by `MAX_TP_PER_NILAI`). Re-runs hanya top-up sampai cap.
- *
- * Wajib: jalan SETELAH seedNilai dan seedTujuanPembelajaran.
+ * Idempotent: cek existing by (nilai_id, tp_id) sebelum insert.
  */
 
 import type { Db } from "../connection"
 import * as schema from "../../../src/lib/db/schema"
 import { eq, and, inArray } from "drizzle-orm"
-import { createRng, randInt, log, logProgress } from "../helpers"
+import { createRng, log, logProgress, pickOne } from "../helpers"
 
-const MAX_TP_PER_NILAI = 1
+const KELAS_XII = ["XII RPL", "XII TKJ A", "XII TKJ B"]
+const MAPEL_UTAMA = ["BIND", "MTK", "BING"] as const
 
-export function seedNilaiTp(db: Db, tahunAjaranId: number): void {
-  const rng = createRng(54321)
+export function seedNilaiTp(
+  db: Db,
+  kelasIdByNama: Map<string, number>,
+  mapelIdByKode: Map<string, { id: number }>,
+  tahunAjaranId: number,
+): void {
+  const rng = createRng(77777)
   let totalInserted = 0
-  let totalSkipped = 0
+  let stepIdx = 0
+  const totalSteps = KELAS_XII.length
 
-  // Load semua nilai + mapel ref + TP per mapel
-  const allNilai = db
-    .select()
-    .from(schema.nilai)
-    .where(eq(schema.nilai.tahun_ajaran_id, tahunAjaranId))
-    .all()
-  if (allNilai.length === 0) {
-    log(`  ⚠ nilai_tp skip: tidak ada nilai untuk TA aktif`)
+  const mapelIds: number[] = []
+  for (const kode of MAPEL_UTAMA) {
+    const m = mapelIdByKode.get(kode)
+    if (m) mapelIds.push(m.id)
+  }
+  if (mapelIds.length === 0) {
+    log(`  ⚠ nilai_tp skip: tidak ada mapel utama`)
     return
   }
 
-  const mapelRows = db.select().from(schema.mataPelajaran).all()
-  const mapelById = new Map(mapelRows.map((m) => [m.id, m]))
-
-  const tpRows = db
+  // Pre-fetch semua TP untuk 3 mapel ini
+  const tpList = db
     .select()
     .from(schema.tujuanPembelajaran)
-    .where(eq(schema.tujuanPembelajaran.tahun_ajaran_id, tahunAjaranId))
+    .where(inArray(schema.tujuanPembelajaran.mapel_id, mapelIds))
     .all()
-  const tpByMapelId = new Map<number, number[]>()
-  for (const tp of tpRows) {
-    if (!tpByMapelId.has(tp.mapel_id)) tpByMapelId.set(tp.mapel_id, [])
-    tpByMapelId.get(tp.mapel_id)!.push(tp.id)
+  if (tpList.length === 0) {
+    log(`  ⚠ nilai_tp skip: tidak ada TP untuk 3 mapel utama`)
+    return
+  }
+  const tpByMapel = new Map<number, typeof tpList>()
+  for (const tp of tpList) {
+    if (!tpByMapel.has(tp.mapel_id)) tpByMapel.set(tp.mapel_id, [])
+    tpByMapel.get(tp.mapel_id)!.push(tp)
   }
 
-  // Existing nilai_tp untuk idempotency + count per nilai
-  const existing = db.select().from(schema.nilaiTp).all()
-  const existingKey = new Set(existing.map((nt) => `${nt.nilai_id}-${nt.tp_id}`))
-  const existingCountByNilai = new Map<number, number>()
-  for (const nt of existing) {
-    existingCountByNilai.set(nt.nilai_id, (existingCountByNilai.get(nt.nilai_id) ?? 0) + 1)
-  }
+  // Pre-fetch existing nilai_tp untuk idempotency
+  const existingNilaiTp = db
+    .select()
+    .from(schema.nilaiTp)
+    .all()
+  const existingKey = new Set(
+    existingNilaiTp.map((r) => `${r.nilai_id}-${r.tp_id}`),
+  )
 
-  // Group nilai by mapel_id untuk progress log
-  const nilaiByMapel = new Map<number, typeof allNilai>()
-  for (const n of allNilai) {
-    if (!nilaiByMapel.has(n.mapel_id)) nilaiByMapel.set(n.mapel_id, [])
-    nilaiByMapel.get(n.mapel_id)!.push(n)
-  }
-  const mapelIds = Array.from(nilaiByMapel.keys())
-  let stepIdx = 0
+  for (const kelasNama of KELAS_XII) {
+    const kelasId = kelasIdByNama.get(kelasNama)
+    if (!kelasId) continue
 
-  for (const mapelId of mapelIds) {
-    const mapel = mapelById.get(mapelId)
-    const tpIds = tpByMapelId.get(mapelId) ?? []
-    const nilaiList = nilaiByMapel.get(mapelId) ?? []
+    const siswaRows = db
+      .select()
+      .from(schema.siswa)
+      .where(eq(schema.siswa.kelas_id, kelasId))
+      .all()
+
+    for (const s of siswaRows) {
+      // Pre-fetch nilai siswa untuk 3 mapel di TA aktif
+      const nilaiSiswa = db
+        .select()
+        .from(schema.nilai)
+        .where(
+          and(
+            eq(schema.nilai.siswa_id, s.id),
+            eq(schema.nilai.tahun_ajaran_id, tahunAjaranId),
+            inArray(schema.nilai.mapel_id, mapelIds),
+          ),
+        )
+        .all()
+
+      for (const n of nilaiSiswa) {
+        const tps = tpByMapel.get(n.mapel_id) ?? []
+        for (const tp of tps) {
+          const key = `${n.id}-${tp.id}`
+          if (existingKey.has(key)) continue
+
+          // 80% Tercapai, 20% Perlu Bimbingan
+          const capaian: "T" | "R" = rng() < 0.8 ? "T" : "R"
+
+          db.insert(schema.nilaiTp)
+            .values({
+              nilai_id: n.id,
+              tp_id: tp.id,
+              capaian,
+            })
+            .run()
+          existingKey.add(key)
+          totalInserted++
+        }
+      }
+    }
     stepIdx++
-    logProgress(stepIdx, mapelIds.length, `nilai_tp ${mapel?.kode_mapel ?? mapelId}`)
-
-    if (tpIds.length === 0) {
-      // Mapel ini belum punya TP, lewati (jangan insert nilai_tp kosong)
-      continue
-    }
-
-    for (const n of nilaiList) {
-      // Cap: skip kalau sudah MAX_TP_PER_NILAI
-      const existingCount = existingCountByNilai.get(n.id) ?? 0
-      if (existingCount >= MAX_TP_PER_NILAI) {
-        totalSkipped += existingCount
-        continue
-      }
-      const remaining = MAX_TP_PER_NILAI - existingCount
-
-      // Pick 1-2 TP random, tapi max 'remaining' slot kosong
-      const tpCount = Math.min(tpIds.length, randInt(1, Math.max(1, remaining), rng))
-      const shuffled = [...tpIds].sort(() => rng() - 0.5)
-
-      // Skip yg sudah ada di existingKey
-      const candidates = shuffled.filter((id) => !existingKey.has(`${n.id}-${id}`))
-      const pickedTpIds = candidates.slice(0, tpCount)
-
-      const capaian: "T" | "R" = (n.nilai_rapor ?? 0) >= 75 ? "T" : "R"
-      for (const tpId of pickedTpIds) {
-        db.insert(schema.nilaiTp)
-          .values({
-            nilai_id: n.id,
-            tp_id: tpId,
-            capaian,
-          })
-          .run()
-        existingKey.add(`${n.id}-${tpId}`)
-        existingCountByNilai.set(n.id, existingCount + 1)
-        totalInserted++
-      }
-    }
+    logProgress(stepIdx, totalSteps, `nilai_tp ${kelasNama}`)
   }
 
-  log(`  ✓ nilai_tp (${totalInserted} new, cap ${MAX_TP_PER_NILAI}/nilai)`)
+  log(`  ✓ nilai_tp (${totalInserted} new)`)
 }

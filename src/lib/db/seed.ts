@@ -35,9 +35,9 @@ db.insert(schema.infoSekolah).values({
     role: "admin",
   }).run()
 
-  // Dimensi P5
+  // Dimensi P5 (idempotent: skip kalau sudah ada by nama)
   const dimensi = [
-    "Keimanan dan Ketakwaan terhadap Tuhan YME",
+    "Keimanan dan Ketaqwaan Terhadap Tuhan Yang Maha Esa",
     "Kewargaan",
     "Penalaran Kritis",
     "Kreativitas",
@@ -46,7 +46,11 @@ db.insert(schema.infoSekolah).values({
     "Kesehatan",
     "Komunikasi",
   ]
+  const dimensiExisting = new Set(
+    db.select({ nama: schema.dimensiP5.nama }).from(schema.dimensiP5).all().map((d) => d.nama),
+  )
   for (const nama of dimensi) {
+    if (dimensiExisting.has(nama)) continue
     db.insert(schema.dimensiP5).values({ nama }).run()
   }
 
@@ -73,9 +77,9 @@ db.insert(schema.infoSekolah).values({
     db.insert(schema.ekskul).values({ nama, wajib: 0 }).run()
   }
 
-  // Tahun Ajaran - 2025/2026 aktif
+  // Tahun Ajaran - 2026/2027 semester 1 aktif (hari ini sudah masuk TA baru)
   db.insert(schema.tahunAjaran).values({
-    nama: "2025/2026",
+    nama: "2026/2027",
     semester: 1,
     is_active: 1,
   }).run()

@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Sinkronisasi SMK TTN — Arsitektur</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        :root {
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --border: #e2e8f0;
+            --text: #0f172a;
+            --text-muted: #64748b;
+            --accent: #2563eb;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+        }
+
+        header {
+            background: linear-gradient(135deg, #1e40af 0%, #7c3aed 100%);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        header h1 {
+            margin: 0 0 0.5rem 0;
+            font-size: 2rem;
+        }
+
+        header p {
+            margin: 0;
+            opacity: 0.9;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        .nav {
+            position: sticky;
+            top: 0;
+            background: var(--card);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem;
+            z-index: 100;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .nav-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .nav a {
+            color: var(--text);
+            text-decoration: none;
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            transition: background 0.2s;
+        }
+
+        .nav a:hover {
+            background: #e0e7ff;
+            color: var(--accent);
+        }
+
+        .section {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .section h2 {
+            color: var(--accent);
+            margin-top: 0;
+            font-size: 1.5rem;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 0.5rem;
+        }
+
+        .section h3 {
+            color: #1e293b;
+            margin-top: 1.5rem;
+        }
+
+        .section p, .section li {
+            color: var(--text);
+        }
+
+        .mermaid {
+            background: #fafafa;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            text-align: center;
+            overflow-x: auto;
+        }
+
+        .info-box {
+            background: #eff6ff;
+            border-left: 4px solid var(--accent);
+            padding: 1rem 1.5rem;
+            border-radius: 0 8px 8px 0;
+            margin: 1rem 0;
+        }
+
+        .info-box strong {
+            color: var(--accent);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+
+        th, td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            background: #f1f5f9;
+            font-weight: 600;
+        }
+
+        code {
+            background: #f1f5f9;
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+
+        pre {
+            background: #0f172a;
+            color: #f8fafc;
+            padding: 1rem;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🔄 Sistem Sinkronisasi SMK TTN</h1>
+        <p>Visualisasi arsitektur: SQLite (lokal) ↔ Firebase Firestore (cloud)</p>
+    </header>
+
+    <nav class="nav">
+        <div class="nav-inner">
+            <a href="#big-picture">1. Big Picture</a>
+            <a href="#outbox">2. Outbox</a>
+            <a href="#push">3. Push Flow</a>
+            <a href="#listener">4. Listener</a>
+            <a href="#pull">5. Pull on Startup</a>
+            <a href="#scenario">6. Full Scenario</a>
+            <a href="#state">7. State Machine</a>
+            <a href="#tables">8. Tabel</a>
+            <a href="#quota">9. Quota</a>
+            <a href="#recovery">10. Recovery</a>
+        </div>
+    </nav>
+
+    <div class="container">
+
+        <div class="info-box">
+            <strong>ℹ️ Prinsip Dasar:</strong> SQLite = source of truth, Firestore = replica. Selalu operasi di local dulu, sync engine yang handle bolak-balik.
+        </div>
+
+        <section class="section" id="big-picture">
+            <h2>1. Big Picture — Arsitektur Tinggi</h2>
+            <div class="mermaid">
+flowchart LR
+    User(["👤 User"])
+
+    subgraph Local["💻 LOKAL (Source of Truth)"]
+        UI["⚛️ React UI"]
+        IPC["🔌 IPC Bridge"]
+        Handler["📡 IPC Handlers"]
+        DB[("🗄️ SQLite")]
+        Queue["📋 sync_log"]
+        Engine["⚙️ Sync Engine<br/>setInterval 30s"]
+        Listener["📡 Listener Engine"]
+    end
+
+    subgraph Cloud["☁️ CLOUD (Replica)"]
+        FS[("🔥 Firestore")]
+    end
+
+    User -->|CRUD| UI
+    UI -->|electronAPI| IPC
+    IPC -->|invoke| Handler
+    Handler -->|INSERT| DB
+    Handler -->|addToSyncLog| Queue
+
+    Engine -->|read pending| Queue
+    Engine -->|push| FS
+    Engine -->|UPDATE| Queue
+
+    FS -.->|onSnapshot| Listener
+    Listener -->|upsert| DB
+    Listener -->|broadcast| UI
+
+    classDef local fill:#dbeafe,stroke:#1e40af
+    classDef cloud fill:#fef3c7,stroke:#a16207
+    classDef user fill:#fce7f3,stroke:#9d174d
+
+    class User user
+    class UI,IPC,Handler,DB,Queue,Engine,Listener local
+    class FS cloud
+            </div>
+        </section>
+
+        <section class="section" id="outbox">
+            <h2>2. Outbox Pattern — Buku Pesanan</h2>
+            <p>Setiap perubahan lokal dicatat di "buku pesanan" dulu, baru sync engine eksekusi.</p>
+            <div class="mermaid">
+flowchart TD
+    A["👤 User: Tambah Siswa 'Budi'"] --> B["IPC Handler<br/>student.handlers.ts"]
+    B --> C{"Transaction<br/>(atomic)"}
+    C -->|1| D["INSERT siswa<br/>(SQLite)"]
+    C -->|2| E["INSERT sync_log<br/>status=pending"]
+    D --> F["✅ Local: Siswa ada<br/>UI langsung tampil"]
+    E --> G["📋 Antrian: 1 row pending"]
+
+    style A fill:#fce7f3
+    style C fill:#fbbf24
+    style F fill:#bbf7d0
+    style G fill:#fed7aa
+            </div>
+            <div class="info-box">
+                <strong>Kenapa outbox?</strong>
+                <ul>
+                    <li><strong>Atomic</strong>: insert data + catat antrian dalam 1 transaksi</li>
+                    <li><strong>Resilient</strong>: app crash? sync_log masih ada → retry saat restart</li>
+                    <li><strong>Idempotent</strong>: UNIQUE constraint → no duplicate entries</li>
+                </ul>
+            </div>
+        </section>
+
+        <section class="section" id="push">
+            <h2>3. Push Flow (Local → Cloud) — Setiap 30 Detik</h2>
+            <div class="mermaid">
+sequenceDiagram
+    autonumber
+    participant Timer as ⏰ setInterval
+    participant Engine as ⚙️ Sync Engine
+    participant DB as 🗄️ SQLite
+    participant FS as 🔥 Firestore
+
+    Timer->>Engine: tick → runSyncCycle()
+    Engine->>Engine: isRunning guard
+    Engine->>Engine: isOnline() check
+
+    alt Offline
+        Engine-->>Timer: skip
+    else Online
+        Engine->>DB: SELECT pending LIMIT 20
+        DB-->>Engine: [5 records]
+
+        loop Each record
+            Engine->>DB: SELECT row
+            Engine->>FS: setDoc()
+            alt Success
+                FS-->>Engine: ✓
+                Engine->>DB: status='success'
+            else Failed
+                FS-->>Engine: ✗
+                Engine->>DB: status='failed', retry++
+            end
+        end
+    end
+            </div>
+            <h3>Retry Strategy (Exponential Backoff)</h3>
+            <table>
+                <tr><th>Retry</th><th>Delay</th></tr>
+                <tr><td>1</td><td>30 detik</td></tr>
+                <tr><td>2</td><td>1 menit</td></tr>
+                <tr><td>3</td><td>2 menit</td></tr>
+                <tr><td>4</td><td>4 menit</td></tr>
+                <tr><td>5</td><td>8 menit</td></tr>
+                <tr><td>≥ 6</td><td>dead_letter (manual)</td></tr>
+            </table>
+        </section>
+
+        <section class="section" id="listener">
+            <h2>4. Real-time Listener (Cloud → Local)</h2>
+            <p>Push hanya 1 arah. <strong>Listener = arah sebaliknya</strong> untuk cross-device sync.</p>
+            <div class="mermaid">
+sequenceDiagram
+    autonumber
+    participant DeviceA as 💻 Device A
+    participant FS as 🔥 Firestore
+    participant DeviceB as 💻 Device B
+    participant UI as ⚛️ UI Device B
+
+    Note over DeviceA,DeviceB: Both subscribe onSnapshot
+
+    DeviceA->>FS: setDoc('siswa', 'abc-123', data)
+    FS-->>FS: committed
+
+    par Real-time
+        FS-->>DeviceA: onSnapshot (own write)
+        FS-->>DeviceB: onSnapshot
+    end
+
+    DeviceB->>DeviceB: docChanges() → added
+    DeviceB->>DeviceB: upsert SQLite
+    DeviceB->>UI: IPC broadcast
+    UI->>UI: re-render
+
+    Note over DeviceB,UI: < 1 detik end-to-end
+            </div>
+        </section>
+
+        <section class="section" id="pull">
+            <h2>5. Pull on Startup — Recovery</h2>
+            <p>Saat app start, sync engine pull semua data dari Firestore. Untuk handle: device baru di-install, multi-device catch-up, restore after crash.</p>
+            <div class="mermaid">
+flowchart TD
+    A["🚀 App Start"] --> B["loadEnvFile"]
+    B --> C["app.whenReady()"]
+    C --> D["initDatabase()"]
+    C --> E["startSyncEngine()"]
+    C --> F["pullOnStartup()"]
+    C --> G["startListener()"]
+    C --> H["createWindow()"]
+
+    F --> F1["Loop 19 collections<br/>parent → child order"]
+    F1 --> F2["getDocs()"]
+    F2 --> F3{"Ada di local?"}
+    F3 -->|No| F4["INSERT"]
+    F3 -->|Yes| F5["UPDATE"]
+    F4 --> F1
+    F5 --> F1
+    F1 -->|Done| F6["return totalUpserted"]
+            </div>
+        </section>
+
+        <section class="section" id="scenario">
+            <h2>6. Tambah Siswa — Full End-to-End</h2>
+            <div class="mermaid">
+sequenceDiagram
+    autonumber
+    actor User as 👤 User
+    participant UI as ⚛️ UI
+    participant IPC as 🔌 Preload
+    participant Handler as 📡 Handler
+    participant DB as 🗄️ DB
+    participant Log as 📋 Log
+    participant Engine as ⚙️ Engine
+    participant FS as 🔥 FS
+    participant DeviceB as 💻 Device B
+
+    User->>UI: Klik Simpan
+    UI->>IPC: studentCreate(data)
+    IPC->>Handler: invoke
+    Handler->>Handler: Validasi
+
+    rect rgb(220, 252, 231)
+        Note over Handler,Log: TRANSACTION
+        Handler->>DB: INSERT siswa
+        Handler->>Log: INSERT sync_log
+    end
+
+    Handler-->>UI: success
+    UI->>User: ✅ Instant visible
+
+    Note over Engine: ... 30s ...
+
+    Engine->>Log: SELECT pending
+    Engine->>DB: SELECT row
+    Engine->>FS: setDoc
+    FS-->>Engine: ✓
+    Engine->>Log: status='success'
+
+    FS-->>DeviceB: onSnapshot
+    DeviceB->>DeviceB: upsert
+    DeviceB->>DeviceB: broadcast → UI
+            </div>
+            <p><strong>Total delay</strong>: 0-30 detik untuk cloud, &lt; 1 detik antar device.</p>
+        </section>
+
+        <section class="section" id="state">
+            <h2>7. Sync Engine State Machine</h2>
+            <div class="mermaid">
+stateDiagram-v2
+    [*] --> Pending: addToSyncLog()
+    Pending --> Syncing: runSyncCycle() pickup
+    Syncing --> Success: push OK
+    Syncing --> Failed: push error
+    Success --> [*]
+    Failed --> Pending: next_retry_at ≤ now
+    Failed --> DeadLetter: retry ≥ 5
+            </div>
+        </section>
+
+        <section class="section" id="tables">
+            <h2>8. Tabel yang Di-Sync</h2>
+            <div class="mermaid">
+flowchart TB
+    subgraph Excluded["❌ EXCLUDED"]
+        E1["sync_log (outbox)"]
+        E2["nilai_ketarunaan (deprecated)"]
+    end
+
+    subgraph Master["📦 MASTER (parent)"]
+        M1["users, guru, tahun_ajaran"]
+        M2["kelas, mata_pelajaran"]
+        M3["siswa"]
+        M4["ekskul, dimensi_p5, ..."]
+    end
+
+    subgraph Transaksi["📊 TRANSAKSI (child)"]
+        T1["absensi, nilai, nilai_tp"]
+        T2["nilai_prakerin, nilai_ekskul"]
+        T3["catatan_wali_kelas, nilai_kokurikuler"]
+    end
+
+    style Excluded fill:#fee2e2
+    style Master fill:#dbeafe
+    style Transaksi fill:#dcfce7
+            </div>
+            <p><strong>22 syncable</strong> → <strong>20 collection</strong> di Firestore (1 deprecated + 1 outbox excluded).</p>
+        </section>
+
+        <section class="section" id="quota">
+            <h2>9. Cost & Quota</h2>
+            <h3>Per demo session (~1-2 jam)</h3>
+            <table>
+                <tr><th>Action</th><th>Writes</th><th>Reads</th></tr>
+                <tr><td>Tambah 1 siswa via UI</td><td>1</td><td>0</td></tr>
+                <tr><td>Tambah 1 nilai</td><td>1</td><td>0</td></tr>
+                <tr><td>Listener subscribe 22 collection (start)</td><td>0</td><td>22</td></tr>
+                <tr><td>Real-time update dari device lain</td><td>0</td><td>1-5</td></tr>
+                <tr><td><strong>Total demo</strong></td><td><strong>~20-50</strong></td><td><strong>~100-200</strong></td></tr>
+            </table>
+            <p><strong>Sangat hemat</strong> — pakai &lt; 1% free tier (20K writes/day, 50K reads/day).</p>
+        </section>
+
+        <section class="section" id="recovery">
+            <h2>10. Recovery — Apa yang Terjadi Saat Crash?</h2>
+            <div class="mermaid">
+flowchart TD
+    A["💥 App crash"] --> B{"sync_log status?"}
+    B -->|pending| C["Belum ter-push<br/>→ re-push saat restart"]
+    B -->|failed| D["Retry dengan backoff"]
+    B -->|success| E["Sudah di cloud"]
+
+    C --> F["🚀 App restart"]
+    D --> F
+    E --> G["✅ Nothing to do"]
+
+    F --> H["pullOnStartup()"]
+    F --> I["startSyncEngine()"]
+    H --> J["✅ Up-to-date"]
+    I --> J
+
+    style A fill:#fee2e2
+    style J fill:#bbf7d0
+            </div>
+            <p><strong>Outbox pattern = no data loss</strong>. Kalau crash saat push, sync_log masih <code>pending</code> → di-retry saat restart.</p>
+        </section>
+
+        <section class="section">
+            <h2>📁 File yang Berkaitan</h2>
+            <table>
+                <tr><th>File</th><th>Baris</th><th>Fungsi</th></tr>
+                <tr><td><code>src/lib/sync/sync-queue.ts</code></td><td>26</td><td>Outbox pattern</td></tr>
+                <tr><td><code>src/lib/sync/sync-engine.ts</code></td><td>623</td><td>Main loop, batch, retry</td></tr>
+                <tr><td><code>src/lib/sync/firebase-config.ts</code></td><td>215</td><td>Init, push, delete</td></tr>
+                <tr><td><code>src/lib/sync/listener-engine.ts</code></td><td>145</td><td>Real-time onSnapshot</td></tr>
+                <tr><td><code>src/lib/sync/config-storage.ts</code></td><td>136</td><td>Encrypted config</td></tr>
+                <tr><td><code>src/lib/sync/retry-strategy.ts</code></td><td>91</td><td>Exponential backoff</td></tr>
+                <tr><td><strong>Total</strong></td><td><strong>1.236</strong></td><td>baris kode sync</td></tr>
+            </table>
+        </section>
+
+    </div>
+
+    <footer>
+        <p>SMK TTN Sync Architecture — Dibuat dengan Mermaid 10 | <a href="README.md">Lihat versi Markdown</a></p>
+    </footer>
+
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            securityLevel: 'loose',
+            flowchart: {
+                useMaxWidth: true,
+                htmlLabels: true,
+                curve: 'basis'
+            },
+            sequence: {
+                useMaxWidth: true,
+                diagramMarginX: 50,
+                diagramMarginY: 10
+            }
+        });
+    </script>
+</body>
+</html>

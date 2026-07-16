@@ -103,9 +103,16 @@
 | Event | Delay |
 |---|---|
 | UI update setelah CRUD | 0 (instant, no network) |
-| Local → Firestore | 0-30 detik (interval) |
-| Firestore → Device lain | < 1 detik (real-time listener) |
-| Pull on startup | 1-3 detik (19 collections) |
+| Local → Firestore (**Push**) | 0-30 detik (interval 30s) |
+| Firestore → Device lain (**Listener**) | < 1 detik (real-time onSnapshot) |
+| Cloud → Local saat app start (**Pull on Startup**) | 1-3 detik (19 collections, ~12K rows) |
+
+## 📥 Pull = Cloud → Local (2 Macam)
+
+| Jenis | Kapan | Apa yang di-pull |
+|---|---|---|
+| **Pull on Startup** | App launch | **Semua** data (~12K rows, parent → child order) |
+| **Real-time Listener** | Setiap ada perubahan | **Increment** (cuma yang berubah, < 1 detik) |
 
 ---
 

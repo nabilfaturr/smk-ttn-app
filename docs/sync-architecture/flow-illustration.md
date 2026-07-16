@@ -315,6 +315,199 @@ T+8m1s : retry_count=5 → dead_letter
 
 ---
 
+## 8️⃣ Pull #1 — On Startup (Saat App Launch)
+
+```
+🚀 APP START
+    │
+    ▼
+[1] initDatabase() ← buka SQLite, apply migrations
+    │
+    ▼
+[2] pullOnStartup() ← NON-BLOCKING (UI render paralel)
+    │
+    │   TUJUAN:
+    │   • Device baru install (kosong, perlu pull semua)
+    │   • Multi-device catch up (perubahan dari Device B)
+    │   • Restore after crash (yang belum sempat push)
+    │
+    ├─► Loop 19 collections (parent → child FK order)
+    │       Kenapa parent dulu? Karena child punya FK ke parent
+    │
+    │   For each collection:           🔥 FIRESTORE         🗄️ SQLITE LOKAL
+    │   ┌────────────────────────┐         │                    │
+    │   │ getDocs('kelas')       │ ───────►│ ◄── 9 docs ──────►│
+    │   │                        │         │                    │
+    │   │ for each doc:          │         │                    │
+    │   │ ┌────────────────────┐ │         │                    │
+    │   │ │ Ada di lokal?      │ │         │                    │
+    │   │ ├─ Tidak → INSERT    │ │         │                    │
+    │   │ └─ Ada   → UPDATE    │ │         │                    │
+    │   │ └────────────────────┘ │         │                    │
+    │   └────────────────────────┘         │                    │
+    │                                      │                    │
+    │   ┌────────────────────────┐         │                    │
+    │   │ getDocs('siswa')       │ ───────►│ ◄── 270 docs ─────►│
+    │   │ getDocs('nilai')       │ ───────►│ ◄── 1260 docs ────►│
+    │   │ getDocs('absensi')     │ ───────►│ ◄── 3000 docs ────►│
+    │   │ ... (16 more)          │         │                    │
+    │   └────────────────────────┘         │                    │
+    │                                      │                    │
+    └─► Return { success: true, totalUpserted: 12K+ }
+    │
+    ▼
+[3] startListener() ← subscribe 22 onSnapshot (untuk pull #2)
+    │
+    ▼
+[4] createWindow() → UI render
+    │
+    ▼
+User lihat data up-to-date! ✅
+```
+
+**Code** (`src/lib/sync/sync-engine.ts:130-210`):
+
+```typescript
+export async function pullOnStartup() {
+  // Loop 19 collections (parent → child FK order)
+  for (const { name, schema, hasId } of PULLABLE_TABLES) {
+    const snapshot = await getDocs(collection(firestoreDb, name))
+    
+    for (const doc of snapshot.docs) {
+      // INSERT kalau belum ada, UPDATE kalau sudah ada
+      sqlite.insert(schema)
+        .values({ id: doc.id, ...doc.data() })
+        .onConflictDoUpdate({ target: schema.id, set: doc.data() })
+        .run()
+    }
+  }
+  
+  return { success: true, totalUpserted: totalCount }
+}
+```
+
+---
+
+## 9️⃣ Pull #2 — Real-time Listener (Instant, < 1 detik)
+
+```
+   DEVICE A                                  🔥 FIRESTORE                          DEVICE B
+      │                                          │                                     │
+      │ push siswa "Budi" ke Firestore           │                                     │
+      ├─────────────────────────────────────────►│                                     │
+      │                                          │                                     │
+      │                              write committed                                     │
+      │                                          │                                     │
+      │                                  ┌───────┴───────┐                             │
+      │                                  │               │                             │
+      │                                  ▼               ▼                             │
+      │                          onSnapshot A    onSnapshot B ← subscribe 22 collection
+      │                          (own write)     (real-time notification)               │
+      │                                                                  │              │
+      │                                                                  ▼              │
+      │                                                       listener-engine.ts        │
+      │                                                       snapshot.docChanges()     │
+      │                                                                  │              │
+      │                                                                  ▼              │
+      │                                                       ┌──────────────────┐      │
+      │                                                       │ type='added'     │      │
+      │                                                       │ id='abc-123'     │      │
+      │                                                       │ data={...}       │      │
+      │                                                       └────────┬─────────┘      │
+      │                                                                  │              │
+      │                                                                  ▼              │
+      │                                                       upsert ke SQLite lokal    │
+      │                                                                  │              │
+      │                                                                  ▼              │
+      │                                                       mainWindow.webContents    │
+      │                                                       .send('sync:change:       │
+      │                                                              siswa', row)         │
+      │                                                                  │              │
+      │                                                                  ▼              │
+      │                                                       ⚛️ Renderer: re-render     │
+      │                                                                  │              │
+      │                                                                  ▼              │
+      │                                                       ✅ "Budi" muncul di       │
+      │                                                          list Device B!          │
+      │                                                                                  │
+      │ ◄───── TOTAL DELAY: < 1 DETIK ───────────────────────────────────────────────────┘
+```
+
+**Code** (`src/lib/sync/listener-engine.ts`):
+
+```typescript
+export function startListener() {
+  // Subscribe 22 collection (semua yang bisa berubah)
+  for (const table of PULLABLE_TABLES) {
+    onSnapshot(collection(firestoreDb, table.name), (snapshot) => {
+      snapshot.docChanges().forEach((change) => {
+        // type: 'added' | 'modified' | 'removed'
+        if (change.type === 'added' || change.type === 'modified') {
+          // Upsert ke SQLite (insert or update)
+          sqlite.insert(table.schema)
+            .values({ id: change.doc.id, ...change.doc.data() })
+            .onConflictDoUpdate({ target: table.schema.id, set: change.doc.data() })
+            .run()
+          
+          // Broadcast ke renderer (real-time UI update)
+          mainWindow?.webContents.send(
+            `sync:change:${table.name}`,
+            { id: change.doc.id, data: change.doc.data() }
+          )
+        }
+        
+        if (change.type === 'removed') {
+          // Hapus dari SQLite
+          sqlite.delete(table.schema)
+            .where(eq(table.schema.id, change.doc.id))
+            .run()
+        }
+      })
+    })
+  }
+}
+```
+
+---
+
+## 🔟 Push vs Pull — Beda & Kapan Dipakai
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                          3 JENIS SYNC FLOW                                   │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+   ╔════════════════╗         ╔════════════════╗         ╔════════════════╗
+   ║  PUSH          ║         ║  PULL          ║         ║  PULL          ║
+   ║  (Local→Cloud) ║         ║  (Cloud→Local) ║         ║  (Cloud→Local) ║
+   ║                ║         ║  On Startup    ║         ║  Real-time     ║
+   ║  ⏰ 30s        ║         ║  🚀 App launch ║         ║  📡 onSnapshot ║
+   ╚════════╤═══════╝         ╚════════╤═══════╝         ╚════════╤═══════╝
+            │                          │                           │
+            ▼                          ▼                           ▼
+   • Sync engine baca          • getDocs per collection      • docChanges per change
+     sync_log (pending)        • Loop 19 collections         • type: added/modified/removed
+   • pushToFirestore           • INSERT or UPDATE local      • Upsert/Delete local
+   • UPDATE status             • Total: ~12K+ rows           • Broadcast ke renderer
+   • Batch 20 per cycle        • Parent → child order        • Delay: < 1 detik
+
+   ARAH:    Local ──30s──► Cloud   Cloud ──1x──► Local   Cloud ──instant──► Local
+   WHEN:    Tiap 30 detik          Saat app start           Saat ada perubahan
+   COST:    20 writes/cycle        1 read/collection        1 read/change
+```
+
+**Kapan masing-masing dipakai?**
+
+| Skenario | Yang Jalan |
+|---|---|
+| User tambah data → Device lain lihat | **Push** (30s) + **Listener** (instant) |
+| Install di PC baru | **Pull on Startup** (semua) + **Listener** (lanjut) |
+| PC lain crash, restart | **Pull on Startup** (catch up missed) + **Listener** (lanjut) |
+| User edit data di Device A | **Push** (30s) + **Listener** ke Device B (instant) |
+| Internet mati sebentar | **Push** retry (backoff), **Listener** reconnect otomatis |
+
+---
+
 ## 🎯 Cheat Sheet untuk Dijawab ke Dosen
 
 | Pertanyaan Dosen | Jawaban Singkat |

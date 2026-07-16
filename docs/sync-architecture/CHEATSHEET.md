@@ -4,14 +4,57 @@
 
 ---
 
-## ⚡ 30-Second Summary
+## 🏛️ Big View Architecture (High-Level)
 
 ```
-SQLite (lokal) = source of truth
-Firestore (cloud) = replica
-Sync = 30 detik interval + real-time listener
-Pattern = outbox (sync_log table)
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                        SISTEM SINKRONISASI SMK TTN                           │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+   💻 LOKAL (PC Siswa / Guru / Admin)              ☁️ CLOUD
+   ══════════════════════════════════              ═══════
+                                                      
+   ┌─────────────────────────┐                      ┌──────────────┐
+   │  ⚛️  React UI           │                      │              │
+   │  (Form input, list)     │                      │   🔥         │
+   │                         │                      │  Firestore   │
+   │  ┌───────────────────┐  │                      │              │
+   │  │  📋 sync_log      │  │                      │  19          │
+   │  │  (outbox/antrian) │  │                      │  collections │
+   │  └───────────────────┘  │                      │              │
+   │           ▲              │                      └──────▲───────┘
+   │           │ catat        │                             │
+   │           │              │                             │
+   │  ┌────────┴──────────┐   │   ⏰ 30 detik              │
+   │  │ 🗄️ SQLite         │   │   (push interval)         │
+   │  │ (22 tabel)       │   │                             │
+   │  │ SOURCE OF TRUTH  │   │   ╔═══════════════════╗     │
+   │  └───────────────────┘   │   ║  ⚙️ Sync Engine   ║─────┤
+   │                         │   ║                   ║     │
+   │  ┌───────────────────┐   │   ║ • Baca sync_log  ║     │
+   │  │ 📡 Listener      │◄──┼───┼───────────────────┼─────┤
+   │  │ (onSnapshot)     │   │   ║ • Push ke Cloud  ║     │
+   │  └───────────────────┘   │   ║ • Retry kalau    ║     │
+   │           │              │   ║   gagal          ║     │
+   │           │ <1 detik     │   ╚═══════════════════╝     │
+   │           ▼              │                             │
+   │  ⚛️ UI (real-time       │                             │
+   │      re-render)         │                             │
+   └─────────────────────────┘                             │
+                                                             
+   ═══════════════════════════════════════════════════════════
+   2 arah:  LOCAL ──push (30s)──► CLOUD
+            LOCAL ◄──listener (<1s)── CLOUD
 ```
+
+**3 Komponen Inti**:
+1. 🗄️ **SQLite** = source of truth (lokal, primary)
+2. 📋 **sync_log** = outbox pattern (antrian, atomic dengan data)
+3. ⚙️ **Sync Engine** = push 30 detik + listener real-time
+
+**2 Arah Sync**:
+- **Push** (Local → Cloud): interval 30 detik, via sync engine
+- **Listener** (Cloud → Local): real-time < 1 detik, via onSnapshot
 
 ---
 

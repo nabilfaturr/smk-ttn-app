@@ -48,17 +48,19 @@ function copyPdfkitFonts(): Plugin {
 function cleanupDistElectron(): Plugin {
   return {
     name: "cleanup-dist-electron",
-    apply: "build",
-    buildStart() {
+    apply: (config, { command }) => command === "build",
+    closeBundle() {
       const outDir = (this as any).environment?.config?.build?.outDir ?? "dist-electron"
       const root = process.cwd()
       const dir = path.join(root, outDir)
       if (!fs.existsSync(dir)) return
-      const keep = new Set(["data", "rapor-template.docx", "rapor-prakerin-template.docx"])
       const entries = fs.readdirSync(dir)
+      const keepExact = new Set(["data", "rapor-template.docx", "rapor-prakerin-template.docx", "main.js", "index.html"])
+      const keepPrefixes = ["main-", "index-", "preload", "renderer", "assets"]
       let removed = 0
       for (const e of entries) {
-        if (keep.has(e)) continue
+        if (keepExact.has(e)) continue
+        if (keepPrefixes.some((p) => e.startsWith(p) || e === p.replace(/-$/, ""))) continue
         const full = path.join(dir, e)
         const stat = fs.statSync(full)
         if (stat.isFile()) {

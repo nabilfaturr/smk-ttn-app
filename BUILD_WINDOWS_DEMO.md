@@ -40,7 +40,8 @@
 - [ ] **JANGAN** simpan `.env` di Git / share di cloud public
 
 ### D. Seed Database (2 menit)
-- [ ] `npm run db:fresh:full` (270 siswa, 9 kelas, 34 mapel, 60 prakerin)
+- [ ] `npm run db:fresh:full` (alias: `npm run demo:data`) → 270 siswa, 9 kelas, 34 mapel, 60 prakerin
+- [ ] Verifikasi: `npm run demo:check` → 22/22 PASS
 
 ### E. Build Production (5 menit)
 - [ ] `npm run build:vite` (render + main process build)

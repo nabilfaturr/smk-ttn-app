@@ -11,6 +11,7 @@ export function SyncStatusPage() {
     pendingCount,
     failedCount,
     deadLetterCount,
+    firebaseConfigured,
     setConnectionStatus,
     setPendingCount,
     setLastSync,
@@ -147,13 +148,16 @@ export function SyncStatusPage() {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <Button onClick={handleManualSync} disabled={connectionStatus !== "online"}>
+        <Button
+          onClick={handleManualSync}
+          disabled={!firebaseConfigured || connectionStatus !== "online"}
+        >
           Sinkronkan Sekarang
         </Button>
         <Button
           variant="outline"
           onClick={handlePull}
-          disabled={pulling || connectionStatus !== "online"}
+          disabled={pulling || !firebaseConfigured || connectionStatus !== "online"}
         >
           {pulling ? "Menarik data..." : "Restore dari Cloud"}
         </Button>

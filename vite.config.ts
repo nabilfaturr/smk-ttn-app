@@ -45,6 +45,34 @@ function copyPdfkitFonts(): Plugin {
   }
 }
 
+function cleanupDistElectron(): Plugin {
+  return {
+    name: "cleanup-dist-electron",
+    apply: "build",
+    buildStart() {
+      const outDir = (this as any).environment?.config?.build?.outDir ?? "dist-electron"
+      const root = process.cwd()
+      const dir = path.join(root, outDir)
+      if (!fs.existsSync(dir)) return
+      const keep = new Set(["data", "rapor-template.docx", "rapor-prakerin-template.docx"])
+      const entries = fs.readdirSync(dir)
+      let removed = 0
+      for (const e of entries) {
+        if (keep.has(e)) continue
+        const full = path.join(dir, e)
+        const stat = fs.statSync(full)
+        if (stat.isFile()) {
+          fs.unlinkSync(full)
+          removed++
+        }
+      }
+      if (removed > 0) {
+        console.log(`[cleanup-dist-electron] Removed ${removed} stale files from ${dir}`)
+      }
+    },
+  }
+}
+
 function copyRaporTemplate(): Plugin {
   return {
     name: "copy-rapor-template",
@@ -65,6 +93,26 @@ function copyRaporTemplate(): Plugin {
   }
 }
 
+function copyRaporPrakerinTemplate(): Plugin {
+  return {
+    name: "copy-rapor-prakerin-template",
+    apply: "build",
+    closeBundle() {
+      const outDir = (this as any).environment?.config?.build?.outDir ?? "dist-electron"
+      const root = process.cwd()
+      const src = path.join(root, "build/rapor-prakerin-template.docx")
+      const destDir = path.join(root, outDir)
+      if (!fs.existsSync(src)) {
+        console.warn(`[copy-rapor-prakerin-template] Source not found: ${src}`)
+        return
+      }
+      fs.mkdirSync(destDir, { recursive: true })
+      fs.copyFileSync(src, path.join(destDir, "rapor-prakerin-template.docx"))
+      console.log(`[copy-rapor-prakerin-template] Copied rapor-prakerin-template.docx → ${destDir}`)
+    },
+  }
+}
+
 export default defineConfig({
   server: {
     host: "127.0.0.1",
@@ -78,11 +126,12 @@ export default defineConfig({
         entry: "electron/main.ts",
         vite: {
           build: {
+            emptyOutDir: false,
             rollupOptions: {
               external: ["better-sqlite3"],
             },
           },
-          plugins: [copyPdfkitFonts(), copyRaporTemplate()],
+          plugins: [copyPdfkitFonts(), cleanupDistElectron(), copyRaporTemplate(), copyRaporPrakerinTemplate()],
         },
       },
       {

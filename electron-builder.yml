@@ -12,6 +12,7 @@ asarUnpack:
   - "**/data/**"
   - "**/node_modules/better-sqlite3/**"
   - "**/rapor-template.docx"
+  - "**/rapor-prakerin-template.docx"
 win:
   target: nsis
   icon: build/icon.ico

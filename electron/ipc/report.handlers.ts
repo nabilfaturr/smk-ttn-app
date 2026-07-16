@@ -2,13 +2,17 @@ import { ipcMain, app } from "electron"
 import { getDb } from "../../src/lib/db"
 import {
   siswa as siswaTable,
+  kelas as kelasTable,
   nilai as nilaiTable,
   absensi as absensiTable,
   nilaiKokurikuler as kokurikulerTable,
+  nilaiPrakerin as prakerinTable,
+  absensiPrakerin as absenPrakerinTable,
 } from "../../src/lib/db/schema"
 import { eq, and } from "drizzle-orm"
 import { generateRaporDocx } from "../../src/lib/pdf/rapor-docx"
 import { generateRaporPrakerin } from "../../src/lib/pdf/rapor-prakerin"
+import { generateRaporPrakerinDocx } from "../../src/lib/pdf/rapor-prakerin-docx"
 import fs from "fs"
 import path from "path"
 
@@ -38,6 +42,22 @@ ipcMain.handle("report:generatePrakerin", async (_event, { siswaId, tahunAjaranI
   }
 })
 
+ipcMain.handle("report:generatePrakerinDocx", async (_event, { siswaId, tahunAjaranId }) => {
+  try {
+    const docx = generateRaporPrakerinDocx(siswaId, tahunAjaranId)
+    const raporDir = getRaporDir()
+    const db = getDb()
+    const s = db.select().from(siswaTable).where(eq(siswaTable.id, siswaId)).get()
+    const safeName = s ? s.nama.replace(/[^a-zA-Z0-9]/g, "_").replace(/_+/g, "_") : siswaId
+    const fileName = `Rapor_Prakerin_${safeName}_${tahunAjaranId}.docx`
+    const filePath = path.join(raporDir, fileName)
+    fs.writeFileSync(filePath, docx)
+    return { success: true, filePath }
+  } catch (error: any) {
+    return { error: error.message }
+  }
+})
+
 ipcMain.handle("report:generateBatchAkademik", async (_event, { kelasId, tahunAjaranId }) => {
   try {
     const db = getDb()
@@ -53,6 +73,31 @@ ipcMain.handle("report:generateBatchAkademik", async (_event, { kelasId, tahunAj
       const docx = generateRaporDocx(s.id, kelasId, tahunAjaranId)
       const safeName = s.nama.replace(/[^a-zA-Z0-9]/g, "_").replace(/_+/g, "_")
       const fileName = `Rapor_Akademik_${safeName}_${tahunAjaranId}.docx`
+      const filePath = path.join(raporDir, fileName)
+      fs.writeFileSync(filePath, docx)
+      filePaths.push(filePath)
+    }
+    return filePaths
+  } catch (error: any) {
+    return { error: error.message }
+  }
+})
+
+ipcMain.handle("report:generateBatchPrakerinDocx", async (_event, { kelasId, tahunAjaranId }) => {
+  try {
+    const db = getDb()
+    const siswaList = db
+      .select()
+      .from(siswaTable)
+      .where(and(eq(siswaTable.kelas_id, kelasId), eq(siswaTable.status, "aktif")))
+      .all()
+
+    const raporDir = getRaporDir()
+    const filePaths: string[] = []
+    for (const s of siswaList) {
+      const docx = generateRaporPrakerinDocx(s.id, tahunAjaranId)
+      const safeName = s.nama.replace(/[^a-zA-Z0-9]/g, "_").replace(/_+/g, "_")
+      const fileName = `Rapor_Prakerin_${safeName}_${tahunAjaranId}.docx`
       const filePath = path.join(raporDir, fileName)
       fs.writeFileSync(filePath, docx)
       filePaths.push(filePath)
@@ -101,6 +146,9 @@ ipcMain.handle("report:checkCompleteness", async (_event, { kelasId, tahunAjaran
       .where(and(eq(siswaTable.kelas_id, kelasId), eq(siswaTable.status, "aktif")))
       .all()
 
+    const kelasInfo = db.select().from(kelasTable).where(eq(kelasTable.id, kelasId)).get()
+    const isKelas12 = kelasInfo?.tingkat === 12
+
     return siswaList.map((s) => {
       const missingData: string[] = []
       const nilaiCount = db.select().from(nilaiTable).where(and(eq(nilaiTable.siswa_id, s.id), eq(nilaiTable.tahun_ajaran_id, tahunAjaranId))).all()
@@ -109,6 +157,24 @@ ipcMain.handle("report:checkCompleteness", async (_event, { kelasId, tahunAjaran
       if (absCount.length === 0) missingData.push("Absensi")
       const kokuCount = db.select().from(kokurikulerTable).where(and(eq(kokurikulerTable.siswa_id, s.id), eq(kokurikulerTable.tahun_ajaran_id, tahunAjaranId))).all()
       if (kokuCount.length === 0) missingData.push("Kokurikuler")
+
+      if (isKelas12) {
+        const prakerin = db
+          .select()
+          .from(prakerinTable)
+          .where(and(eq(prakerinTable.siswa_id, s.id), eq(prakerinTable.tahun_ajaran_id, tahunAjaranId)))
+          .get()
+        if (!prakerin || prakerin.tpl === null || prakerin.sl === null || prakerin.sk === null) {
+          missingData.push("Nilai Prakerin")
+        }
+        const absenPrakerin = db
+          .select()
+          .from(absenPrakerinTable)
+          .where(and(eq(absenPrakerinTable.siswa_id, s.id), eq(absenPrakerinTable.tahun_ajaran_id, tahunAjaranId)))
+          .get()
+        if (!absenPrakerin) missingData.push("Absensi Prakerin")
+      }
+
       return { siswa_id: s.id, nama: s.nama, status: missingData.length === 0 ? "lengkap" : "kurang", missingData }
     })
   } catch (error: any) {

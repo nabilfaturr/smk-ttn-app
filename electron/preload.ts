@@ -135,8 +135,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("report:generateAkademik", { siswaId, kelasId, tahunAjaranId }),
   reportGeneratePrakerin: (siswaId: string, tahunAjaranId: string) =>
     ipcRenderer.invoke("report:generatePrakerin", { siswaId, tahunAjaranId }),
+  reportGeneratePrakerinDocx: (siswaId: string, tahunAjaranId: string) =>
+    ipcRenderer.invoke("report:generatePrakerinDocx", { siswaId, tahunAjaranId }),
   reportGenerateBatchAkademik: (kelasId: string, tahunAjaranId: string) =>
     ipcRenderer.invoke("report:generateBatchAkademik", { kelasId, tahunAjaranId }),
+  reportGenerateBatchPrakerinDocx: (kelasId: string, tahunAjaranId: string) =>
+    ipcRenderer.invoke("report:generateBatchPrakerinDocx", { kelasId, tahunAjaranId }),
   reportSaveToFolder: (filePaths: string[], destinationFolder: string) =>
     ipcRenderer.invoke("report:saveToFolder", { filePaths, destinationFolder }),
   reportCheckCompleteness: (kelasId: string, tahunAjaranId: string) =>

@@ -74,7 +74,9 @@ export interface ElectronAPI {
   // Reports
   reportGenerateAkademik: (siswaId: string, kelasId: string, tahunAjaranId: string) => Promise<string>
   reportGeneratePrakerin: (siswaId: string, tahunAjaranId: string) => Promise<string>
+  reportGeneratePrakerinDocx: (siswaId: string, tahunAjaranId: string) => Promise<{ success: boolean; filePath: string } | { error: string }>
   reportGenerateBatchAkademik: (kelasId: string, tahunAjaranId: string) => Promise<string[]>
+  reportGenerateBatchPrakerinDocx: (kelasId: string, tahunAjaranId: string) => Promise<string[] | { error: string }>
   reportSaveToFolder: (filePaths: string[], destinationFolder: string) => Promise<{ success: boolean }>
   reportCheckCompleteness: (kelasId: string, tahunAjaranId: string) => Promise<any[]>
   reportGetRaporDir: () => Promise<string>

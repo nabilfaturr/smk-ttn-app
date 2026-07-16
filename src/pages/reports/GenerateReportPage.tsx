@@ -53,8 +53,17 @@ export function GenerateReportPage() {
         } else if (res?.error) {
           toast.error(res.error)
         }
-      } else {
-        toast.info("Generate per siswa untuk rapor prakerin. Pilih satu siswa terlebih dahulu.")
+      } else if (jenisRapor === "prakerin") {
+        const res = await window.electronAPI.reportGenerateBatchPrakerinDocx(selectedKelas, tahunAjaran)
+        if (Array.isArray(res)) {
+          setGeneratedFiles(res)
+          toast.success(`${res.length} rapor prakerin berhasil di-generate`, {
+            description: `Disimpan di: ${raporDir}`,
+            duration: 5000,
+          })
+        } else if (res?.error) {
+          toast.error(res.error)
+        }
       }
     } catch (err: any) {
       toast.error(err.message)

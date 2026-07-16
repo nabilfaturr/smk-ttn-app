@@ -78,7 +78,7 @@ function createWindow() {
     mainWindow?.show()
   })
 
-  if (isDev && process.env.NODE_ENV !== "test") {
+  if (isDev && process.env.NODE_ENV !== "test" && process.env.NODE_ENV !== "production") {
     mainWindow.loadURL("http://localhost:5173")
     mainWindow.webContents.openDevTools()
   } else {

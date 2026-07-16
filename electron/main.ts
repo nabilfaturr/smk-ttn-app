@@ -1,5 +1,43 @@
 import { app, BrowserWindow } from "electron"
 import path from "path"
+import fs from "fs"
+
+function loadEnvFile(): void {
+  if (typeof process === "undefined") return
+  const candidates = [
+    path.join(process.cwd(), ".env"),
+    path.join(app.getAppPath(), ".env"),
+  ]
+  for (const p of candidates) {
+    if (!fs.existsSync(p)) continue
+    try {
+      const content = fs.readFileSync(p, "utf-8")
+      for (const line of content.split("\n")) {
+        const trimmed = line.trim()
+        if (!trimmed || trimmed.startsWith("#")) continue
+        const eq = trimmed.indexOf("=")
+        if (eq <= 0) continue
+        const key = trimmed.slice(0, eq).trim()
+        let value = trimmed.slice(eq + 1).trim()
+        if (
+          (value.startsWith('"') && value.endsWith('"')) ||
+          (value.startsWith("'") && value.endsWith("'"))
+        ) {
+          value = value.slice(1, -1)
+        }
+        if (process.env[key] === undefined) {
+          process.env[key] = value
+        }
+      }
+      console.log(`[env] loaded ${p}`)
+      return
+    } catch (e) {
+      console.warn(`[env] failed to load ${p}:`, e)
+    }
+  }
+}
+
+loadEnvFile()
 
 // Set app name early agar userData path konsisten
 // (default: "Electron" → userData di ~/.config/Electron, gak match dev/prod path)

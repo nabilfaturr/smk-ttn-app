@@ -70,13 +70,18 @@ export function getFirebaseConfig(): FirebaseConfig {
   }
 
   // Priority 2: dari .env (untuk development)
+  // Pakai process.env (di-inject oleh electron/main.ts dari .env file) atau
+  // import.meta.env (untuk renderer code via Vite).
+  const envSource: any = typeof process !== "undefined" && process.env
+    ? process.env
+    : (typeof import.meta !== "undefined" ? (import.meta as any).env : {})
   const fromEnv: FirebaseConfig = {
-    apiKey: (import.meta.env.VITE_FIREBASE_API_KEY as string) ?? "",
-    authDomain: (import.meta.env.VITE_FIREBASE_AUTH_DOMAIN as string) ?? "",
-    projectId: (import.meta.env.VITE_FIREBASE_PROJECT_ID as string) ?? "",
-    storageBucket: (import.meta.env.VITE_FIREBASE_STORAGE_BUCKET as string) ?? "",
-    messagingSenderId: (import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID as string) ?? "",
-    appId: (import.meta.env.VITE_FIREBASE_APP_ID as string) ?? "",
+    apiKey: (envSource.VITE_FIREBASE_API_KEY as string) ?? "",
+    authDomain: (envSource.VITE_FIREBASE_AUTH_DOMAIN as string) ?? "",
+    projectId: (envSource.VITE_FIREBASE_PROJECT_ID as string) ?? "",
+    storageBucket: (envSource.VITE_FIREBASE_STORAGE_BUCKET as string) ?? "",
+    messagingSenderId: (envSource.VITE_FIREBASE_MESSAGING_SENDER_ID as string) ?? "",
+    appId: (envSource.VITE_FIREBASE_APP_ID as string) ?? "",
   }
   cachedConfig = fromEnv
   configLoaded = false // .env tidak dianggap "configured" (butuh save lewat UI)

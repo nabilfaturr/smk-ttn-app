@@ -40,7 +40,7 @@ import {
   konfigurasi,
 } from "../db/schema"
 import { eq } from "drizzle-orm"
-import net from "net"
+import https from "https"
 import { initFirebase, pushToFirestore, deleteFromFirestore, getFirebaseConfig } from "./firebase-config"
 
 /* ------------------------------------------------------------------ */
@@ -90,28 +90,62 @@ let isOnlineCached: { value: boolean; ts: number } | null = null
 /* ------------------------------------------------------------------ */
 
 function isOnline(): boolean {
-  // Cache untuk 10 detik agar tidak spam socket
+  // Cache untuk 10 detik agar tidak spam network
   if (isOnlineCached && Date.now() - isOnlineCached.ts < 10_000) {
     return isOnlineCached.value
   }
-  try {
-    const socket = new net.Socket()
-    let resolved = false
-    const result = socket.connect(80, "8.8.8.8", () => {
-      resolved = true
-      socket.destroy()
-    })
-    socket.setTimeout(2000, () => {
-      if (!resolved) socket.destroy()
-    })
-    // Note: ini best-effort. Karena socket connect itu async,
-    // kita asumsikan true kecuali ada error. Untuk lebih akurat,
-    // bisa pakai DNS lookup atau fetch ke endpoint.
-    isOnlineCached = { value: true, ts: Date.now() }
-    return true
-  } catch {
+  // Pakai HTTPS HEAD ke endpoint connectivity-check (Google generate_204).
+  // Reliable lintas platform: HTTPS biasanya allowed di hampir semua network
+  // (raw TCP socket ke 8.8.8.8:80 sering diblock firewall/k8s/LXC).
+  // Synchronous wrapper karena caller (runSyncCycle) sync — kita return
+  // nilai cache (default optimistic TRUE) lalu refresh di background.
+  if (!isOnlineCached) {
+    isOnlineCached = { value: true, ts: 0 }
+  }
+  refreshOnlineStatus()
+  return isOnlineCached.value
+}
+
+/**
+ * Fire-and-forget HTTPS HEAD probe ke https://www.google.com/generate_204.
+ * Update `isOnlineCached` dengan hasil (online/offline).
+ * Tidak blocking — caller pakai cache value (default optimistic true di awal).
+ */
+function refreshOnlineStatus(): void {
+  const req = https.request(
+    {
+      host: "www.google.com",
+      port: 443,
+      path: "/generate_204",
+      method: "HEAD",
+      timeout: 3000,
+    },
+    (res) => {
+      const online = (res.statusCode ?? 0) >= 200 && (res.statusCode ?? 0) < 400
+      isOnlineCached = { value: online, ts: Date.now() }
+      // consume response agar socket bisa close
+      res.resume()
+    },
+  )
+  req.on("error", () => {
     isOnlineCached = { value: false, ts: Date.now() }
-    return false
+  })
+  req.on("timeout", () => {
+    req.destroy()
+    isOnlineCached = { value: false, ts: Date.now() }
+  })
+  req.end()
+}
+
+/* ------------------------------------------------------------------ */
+/*  Safe logger (swallow EPIPE saat stdout pipe putus)                  */
+/* ------------------------------------------------------------------ */
+
+function safeLog(level: "log" | "warn" | "error", ...args: unknown[]): void {
+  try {
+    console[level](...args)
+  } catch (e) {
+    // Ignore EPIPE & other console write errors
   }
 }
 
@@ -121,12 +155,12 @@ function isOnline(): boolean {
 
 export function startSyncEngine() {
   if (syncInterval) return
-  console.log("[sync] starting interval (30s)")
+  safeLog("log", "[sync] starting interval (30s)")
   syncInterval = setInterval(() => {
-    console.log("[sync] interval tick, running cycle...")
+    safeLog("log", "[sync] interval tick, running cycle...")
     runSyncCycle()
-      .then((r) => console.log(`[sync] cycle done: processed=${r.processed} success=${r.success} failed=${r.failed}`))
-      .catch((err) => console.error("[sync] cycle error:", err))
+      .then((r) => safeLog("log", `[sync] cycle done: processed=${r.processed} success=${r.success} failed=${r.failed}`))
+      .catch((err) => safeLog("error", "[sync] cycle error:", err))
   }, 30000)
 }
 
@@ -194,7 +228,7 @@ function notifyStartupListeners() {
     try {
       l()
     } catch (err) {
-      console.error("[startup-pull] listener error:", err)
+      safeLog("error", "[startup-pull] listener error:", err)
     }
   }
 }
@@ -216,21 +250,21 @@ export async function runSyncCycle(): Promise<{ processed: number; success: numb
   try {
     const online = isOnline()
     if (!online) {
-      console.log("[sync] skip cycle: offline")
+      safeLog("log", "[sync] skip cycle: offline")
       return result
     }
 
     // Init Firebase kalau belum
     const ok = initFirebase()
     if (!ok) {
-      console.log("[sync] skip cycle: Firebase init failed")
+      safeLog("log", "[sync] skip cycle: Firebase init failed")
       return result
     }
 
     const db = getDb()
     // Quick count check
     const total = db.select().from(syncLog).all().length
-    console.log(`[sync] runSyncCycle: ${total} total rows in sync_log`)
+    safeLog("log", `[sync] runSyncCycle: ${total} total rows in sync_log`)
     // Ambil record pending ATAU failed yang next_retry_at sudah lewat.
     // dead_letter di-skip (sudah menyerah).
     const now = new Date().toISOString()
@@ -314,7 +348,7 @@ export async function runSyncCycle(): Promise<{ processed: number; success: numb
           .run()
         result.success++
       } catch (err: any) {
-        console.error(`[sync] Failed to sync ${record.tabel}/${record.record_id} (attempt ${record.retry_count + 1}):`, err?.message ?? err)
+        safeLog("error", `[sync] Failed to sync ${record.tabel}/${record.record_id} (attempt ${record.retry_count + 1}):`, err?.message ?? err)
         const decision = getRetryDecision(record.retry_count)
         db.update(syncLog)
           .set({
@@ -329,7 +363,7 @@ export async function runSyncCycle(): Promise<{ processed: number; success: numb
         result.failed++
         if (decision.nextStatus === "dead_letter") {
           result.deadLetter++
-          console.warn(`[sync] ${record.tabel}/${record.record_id} reached dead_letter after ${decision.retryCount} attempts`)
+          safeLog("warn", `[sync] ${record.tabel}/${record.record_id} reached dead_letter after ${decision.retryCount} attempts`)
         }
       }
     }
@@ -569,7 +603,7 @@ export async function pullFromFirestore(
           upserted++
         } catch (rowErr: any) {
           // Skip individual row errors, lanjut ke row berikutnya
-          console.warn(`[pull] ${name} row id=${id} failed:`, rowErr?.message ?? rowErr)
+          safeLog("warn", `[pull] ${name} row id=${id} failed:`, rowErr?.message ?? rowErr)
         }
       }
 
@@ -578,7 +612,7 @@ export async function pullFromFirestore(
       result.tables.push({ name, fetched: docs.length, upserted })
     } catch (tableErr: any) {
       const msg = tableErr?.message ?? String(tableErr)
-      console.error(`[pull] table ${name} failed:`, msg)
+      safeLog("error", `[pull] table ${name} failed:`, msg)
       result.tables.push({ name, fetched: 0, upserted: 0, error: msg })
       // Lanjut ke table berikutnya — partial pull lebih berguna daripada gagal total
     }

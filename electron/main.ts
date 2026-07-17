@@ -2,6 +2,14 @@ import { app, BrowserWindow } from "electron"
 import path from "path"
 import fs from "fs"
 
+// Suppress EPIPE saat stdout/stderr di-close (klik icon desktop → launcher tutup fd).
+process.stdout.on("error", (err) => {
+  if ((err as NodeJS.ErrnoException).code !== "EPIPE") throw err
+})
+process.stderr.on("error", (err) => {
+  if ((err as NodeJS.ErrnoException).code !== "EPIPE") throw err
+})
+
 function loadEnvFile(): void {
   if (typeof process === "undefined") return
   const candidates = [

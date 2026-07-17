@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Sistem Absensi SMK TTN
+GenericName=Absensi & Penilaian SMK
+Comment=Aplikasi absensi dan penilaian SMK Taruna Tekno Nusantara
+Exec=/home/nabilfaturr/Documents/projetcs/smk-ttn-app/bin/smk-ttn.sh
+Icon=/home/nabilfaturr/Documents/projetcs/smk-ttn-app/build/icon.png
+Terminal=false
+Categories=Education;Office;
+StartupNotify=true
+StartupWMClass=smk-ttn-app
+Keywords=absensi;penilaian;rapor;sekolah;smk;
